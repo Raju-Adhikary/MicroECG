@@ -1,0 +1,155 @@
+List of common abnormal ECG readings and their possible interpretations:
+
+### 1. **Bradycardia** (Slow Heart Rate)
+   - **Description**: Heart rate less than 60 BPM.
+   - **Possible Causes**: 
+     - Hypothyroidism
+     - Heart block
+     - Athlete’s heart (physiologically normal in athletes)
+
+### 2. **Tachycardia** (Fast Heart Rate)
+   - **Description**: Heart rate more than 100 BPM.
+   - **Possible Causes**: 
+     - Fever
+     - Anxiety
+     - Dehydration
+     - Heart failure
+
+### 3. **Atrial Fibrillation (AFib)**
+   - **Description**: Irregularly spaced R-waves, no distinct P-wave.
+   - **Possible Causes**: 
+     - Heart disease
+     - High blood pressure
+     - Thyroid issues
+
+### 4. **Atrial Flutter**
+   - **Description**: Multiple P-waves between QRS complexes (sawtooth pattern).
+   - **Possible Causes**:
+     - Heart disease
+     - High blood pressure
+
+### 5. **Premature Atrial Contractions (PACs)**
+   - **Description**: Early, abnormal P-wave.
+   - **Possible Causes**:
+     - Stress
+     - Caffeine
+     - Smoking
+
+### 6. **Premature Ventricular Contractions (PVCs)**
+   - **Description**: Early, wide QRS complex, no preceding P-wave.
+   - **Possible Causes**: 
+     - Electrolyte imbalance
+     - Heart disease
+     - Stimulants (caffeine, nicotine)
+
+### 7. **Ventricular Tachycardia (VT)**
+   - **Description**: Fast, regular heart rate originating in the ventricles, wide QRS complex.
+   - **Possible Causes**:
+     - Heart disease
+     - Electrolyte imbalances
+
+### 8. **Ventricular Fibrillation (VFib)**
+   - **Description**: Chaotic, irregular waves, no recognizable QRS complex.
+   - **Possible Causes**: 
+     - Cardiac arrest
+     - Severe heart disease
+
+### 9. **Heart Block**
+   - **First Degree**: Prolonged PR interval (>200 ms).
+   - **Second Degree (Mobitz I/Wenckebach)**: Progressive lengthening of the PR interval until a QRS complex is dropped.
+   - **Second Degree (Mobitz II)**: Sudden dropped QRS without lengthening PR interval.
+   - **Third Degree (Complete Heart Block)**: No relationship between P-waves and QRS complexes.
+   - **Possible Causes**: 
+     - Heart disease
+     - Medications
+
+### 10. **ST Segment Elevation**
+   - **Description**: ST segment elevated above baseline.
+   - **Possible Causes**:
+     - Myocardial infarction (heart attack)
+     - Pericarditis
+
+### 11. **ST Segment Depression**
+   - **Description**: ST segment depressed below baseline.
+   - **Possible Causes**:
+     - Ischemia (lack of oxygen to the heart)
+     - Angina
+     - Digitalis effect (from certain medications)
+
+### 12. **T-wave Inversion**
+   - **Description**: T-wave flipped (pointing downward).
+   - **Possible Causes**:
+     - Ischemia
+     - Electrolyte imbalance
+     - Myocardial infarction
+
+### 13. **Prolonged QT Interval**
+   - **Description**: Lengthened QT interval (>450 ms in men, >470 ms in women).
+   - **Possible Causes**:
+     - Congenital long QT syndrome
+     - Medications
+     - Electrolyte abnormalities
+
+### 14. **Shortened QT Interval**
+   - **Description**: Shortened QT interval.
+   - **Possible Causes**:
+     - Hypercalcemia
+     - Digitalis toxicity
+
+### 15. **Left Bundle Branch Block (LBBB)**
+   - **Description**: Wide QRS complex, abnormal T-waves.
+   - **Possible Causes**:
+     - Hypertension
+     - Coronary artery disease
+
+### 16. **Right Bundle Branch Block (RBBB)**
+   - **Description**: Wide QRS complex with two peaks.
+   - **Possible Causes**:
+     - Pulmonary embolism
+     - Chronic lung disease
+
+### 17. **Pathological Q-Waves**
+   - **Description**: Abnormally deep and wide Q-waves.
+   - **Possible Causes**:
+     - Previous heart attack (old myocardial infarction)
+
+### 18. **Hyperkalemia (High Potassium)**
+   - **Description**: Tall, peaked T-waves, wide QRS.
+   - **Possible Causes**: 
+     - Kidney failure
+     - Medications affecting potassium
+
+### 19. **Hypokalemia (Low Potassium)**
+   - **Description**: Flattened or inverted T-waves, U-waves may be visible.
+   - **Possible Causes**: 
+     - Diuretics
+     - Vomiting/diarrhea
+
+### 20. **Hypercalcemia (High Calcium)**
+   - **Description**: Shortened QT interval.
+   - **Possible Causes**:
+     - Hyperparathyroidism
+     - Excess vitamin D intake
+
+### 21. **Hypocalcemia (Low Calcium)**
+   - **Description**: Prolonged QT interval.
+   - **Possible Causes**:
+     - Vitamin D deficiency
+     - Renal disease
+
+### 22. **Wolff-Parkinson-White (WPW) Syndrome**
+   - **Description**: Shortened PR interval with a delta wave (slurred upstroke in QRS complex).
+   - **Possible Causes**: 
+     - Congenital accessory pathway between atria and ventricles.
+
+### 23. **Early Repolarization**
+   - **Description**: Elevation of J-point (the junction between the end of the QRS complex and start of the ST segment).
+   - **Possible Causes**:
+     - Common in healthy young adults.
+
+### 24. **Sinus Arrhythmia**
+   - **Description**: Variation in heart rate with breathing, regular irregularity.
+   - **Possible Causes**: 
+     - Normal in young, healthy individuals.
+
+Including these conditions in your user manual will help users understand various abnormalities and their clinical significance.

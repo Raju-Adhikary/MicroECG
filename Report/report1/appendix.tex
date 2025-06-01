@@ -1,0 +1,482 @@
+\addcontentsline{toc}{chapter}{Appendices}
+\appendix
+\chapter*{\centering \large Appendix\markboth{Appendix}{Appendix}}
+\subsection*{Microcontroller program}
+\begin{lstlisting}[style=htmlcssjs, language=CPP]
+#include <string>
+
+#include <DNSServer.h>
+#include <WebSocketsServer.h>
+#include <ESP8266WebServer.h>
+
+#define USE_SERIAL Serial
+
+const byte DNS_PORT = 53;
+IPAddress apIP(172, 217, 28, 1);
+DNSServer dnsServer;
+ESP8266WebServer server(80);
+WebSocketsServer webSocket = WebSocketsServer(81);
+
+
+// ADC buffer and indexing variables
+int *adcBuffer = nullptr;    // Dynamic buffer pointer
+int sampleIndex = 0;
+int sps = 10;                // Default samples per second
+unsigned long previousMillis = 0;
+const long sendInterval = 333;   // Time interval to send data (333ms)
+
+unsigned long lastSampleTime = 0;  // Time of last sample
+long sampleInterval = 1000 / sps;  // Interval between each sample based on SPS
+
+
+String webServerIndexPage = "<WEB UI CODE>";
+
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t length) {
+
+    switch (type) {
+        case WStype_DISCONNECTED:
+        USE_SERIAL.printf("[%u] Disconnected!\n", num);
+        break;
+        case WStype_CONNECTED:
+        {
+            IPAddress ip = webSocket.remoteIP(num);
+            USE_SERIAL.printf("[%u] Connected from %d.%d.%d.%d url: %s\n", num, ip[0], ip[1], ip[2], ip[3], payload);
+        }
+        break;
+        case WStype_TEXT:
+        USE_SERIAL.printf("[%u] get Text: %s\n", num, payload);
+
+        //int arrayLen = payload - 0;
+        int newSps = atoi((const char*)payload);
+
+        // Try to parse the samples per second (SPS) from the message
+        if (newSps > 0 && newSps != sps) {
+            // Adjust the number of samples per second if needed
+            sps = newSps;
+
+            // Reallocate the ADC buffer with the new size
+            if (adcBuffer != nullptr) {
+                free(adcBuffer); // Free old buffer
+            }
+            adcBuffer = (int *)malloc(sps * sizeof(int)); // Allocate new buffer
+
+            // Update sampling interval based on SPS
+            sampleInterval = 1000 / sps;
+
+            Serial.print("New SPS: ");
+            Serial.println(sps);
+        }
+
+
+        break;
+    }
+}
+
+void handleNotFound() {
+    server.sendHeader("Location", "/", true); //Redirect to our html web page
+    server.send(301, "text/plane", "");
+}
+
+
+void setup() {
+    USE_SERIAL.begin(115200);
+
+    //USE_SERIAL.setDebugOutput(true);
+
+    USE_SERIAL.println();
+    USE_SERIAL.println();
+    USE_SERIAL.println();
+
+    for (uint8_t t = 4; t > 0; t--) {
+        USE_SERIAL.printf("[SETUP] BOOT WAIT %d...\n", t);
+        USE_SERIAL.flush();
+        delay(1000);
+    }
+    WiFi.mode(WIFI_AP);
+    WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
+    WiFi.softAP("RANMPGroupF");
+
+    // start webSocket server
+    webSocket.begin();
+    webSocket.onEvent(webSocketEvent);
+
+    dnsServer.start(DNS_PORT, "*", apIP);
+
+    // handle index
+    server.on("/", []() {
+        server.send(200, "text/html", webServerIndexPage);
+    });
+    server.onNotFound(handleNotFound);
+
+    server.begin();
+}
+
+unsigned long last_10sec = 0;
+unsigned int counter = 0;
+
+void loop() {
+    unsigned long t = millis();
+    webSocket.loop();
+    dnsServer.processNextRequest();
+    server.handleClient();
+
+    if ((t - last_10sec) > 10 * 1000) {
+        counter++;
+        bool ping = (counter % 2);
+        int i = webSocket.connectedClients(ping);
+        USE_SERIAL.printf("%d Connected websocket clients ping: %d\n", i, ping);
+        last_10sec = millis();
+    }
+
+
+    // Check if it's time to sample ADC data based on SPS
+    unsigned long currentMillis = millis();
+
+    if (currentMillis - lastSampleTime >= sampleInterval) {
+        // Read ADC and store it in buffer
+        adcBuffer[sampleIndex] = analogRead(A0);
+        sampleIndex++;
+
+        // Reset buffer and send data every 333ms
+        if (sampleIndex >= sps) {
+            sendSamplesThroughWebSocket(adcBuffer, sps);
+            sampleIndex = 0; // Reset buffer index
+        }
+
+        lastSampleTime = currentMillis;
+    }
+
+    // Send data every 333ms
+    if (currentMillis - previousMillis >= sendInterval) {
+        if (sampleIndex > 0) {
+            sendSamplesThroughWebSocket(adcBuffer, sampleIndex);
+            sampleIndex = 0; // Reset buffer index
+        }
+        previousMillis = currentMillis;
+    }
+}
+
+// Function to send ADC samples via WebSocket
+void sendSamplesThroughWebSocket(int *samples, int count) {
+  // Create a buffer to hold raw data (binary format)
+  uint8_t buffer[count * sizeof(int)];
+  memcpy(buffer, samples, count * sizeof(int));  // Copy ADC samples to buffer
+
+  // Send the buffer as a binary message over WebSocket
+  webSocket.broadcastBIN(buffer, count * sizeof(int));
+}
+\end{lstlisting}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\subsection*{Web Development for UI}
+\subsubsection*{HTML}
+\begin{lstlisting}[style=htmlcssjs]
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>ECG Machine Mejor Project</title>
+</head>
+<body>
+    <h1> Micro DSO</h1>
+    <canvas height="200" id="graph"></canvas>
+    <div class="position-control">
+        <button onclick="autoScale()">Auto Scale</button><br />
+        TIME/DIV
+        <div>-<input type="range" oninput="time\_per\_div = (this.value/100)*6" min="1" max="99" value="99" />+</div>
+        POSITION HORIZONTAL
+        <div>◀<input disabled type="range" oninput="time\_per\_div = 31 - this.value" min="1" max="30" value="30" />▶</div>
+        VOLT/DIV
+        <div>-<input type="range" oninput="volt\_per\_div = 0.003 * this.value" min="15" max="45" value="1" />+</div>
+        POSITION VERTICAL
+        <div>\&\#9650;<input type="range" oninput="positionY =  -this.value" min="-200" max="200" value="30" />\&\#9660;</div>
+    </div>
+</body>
+</html>
+% \end{lstlisting}
+
+
+
+
+
+\subsubsection*{CSS}
+\begin{lstlisting}[style=htmlcssjs]
+\#canvas {
+    box-sizing: border-box;
+}
+body {
+    margin: 0;
+}
+.position-control {
+    text-align: center;
+}
+.position-control div {
+    display: flex;
+    justify-content: center;
+    margin: 10px;
+}
+.position-control input[type="range"] {
+    width: 80%;
+}
+
+.notify-container {
+    width: 100%;
+    height: auto;
+    max-height: 230px;
+    overflow: scroll;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: fixed;
+    top: 10px;
+    left: 0;
+    pointer-events: none;
+}
+.notify-container>div {
+    max-width: 400px;
+    margin: 10px;
+    border-radius: 5px;
+    text-align: center;
+    padding: 10px 20px;
+    background-color: \#eef;
+    color: \#00f;
+    position: relative;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    transition: transform .5s ease;
+    pointer-events: auto;
+}
+.notify-container>div:hover {
+    transform: translateY(10%);
+}
+.notify-container>div>.notifyClose {
+    position: absolute;
+    right: 5px;
+    bottom: 25%;
+    font-weight: 1000;
+}
+\end{lstlisting}
+
+
+
+
+\subsubsection*{JavaScript}
+\begin{lstlisting}[style=htmlcssjs, language=JavaScript]
+//Self designed lightweight notification
+(()=>{
+    var container = document.createElement('div');
+    container.className = "notify-container";
+    document.body.appendChild(container);
+    document.notify = (r,a,j,u) => {
+        var notifyDiv = document.createElement('div'),
+        notifyClose = document.createElement('div');
+        notifyDiv.innerText = r;
+        notifyClose.className = "notifyClose";
+        notifyClose.innerText = "×";
+        notifyDiv.appendChild(notifyClose);
+        if(a == "error")  notifyDiv.style = 'background-color:#fdd;color:f00;';
+        if(a == "warning")  notifyDiv.style = 'background-color:#ffc;color:f00;';
+        if(a == "success")  notifyDiv.style = 'background-color:#cfc;color:#080;';
+        var stayTime = (j||(container.innerText.length + t.toString().length)*2e2);
+        setTimeout(()=>{notifyDiv.remove()},stayTime)
+        notifyClose.onclick = function(){notifyDiv.remove()};
+        container.appendChild(notifyDiv);
+    }
+})();
+
+const wSocket = new WebSocket('ws://172.217.28.1:81');
+//const wSocket = new WebSocket('ws://localhost:8765');
+wSocket.onopen = function() {
+    document.notify("WebSocket: Connection established!",'success');
+    wSocket.send(1)
+};
+wSocket.onmessage = function(event) {
+    var incomingData = eval(event.data);
+    var arr = String.fromCharCode.apply(null, new Uint8Array(incomingData));
+    console.log(arr);
+    data_plot.push(...incomingData);
+    data_plot.splice(0, incomingData.length);
+    wSocket.send(200);
+};
+wSocket.onerror = function(error) {
+    document.notify("WebSocket: Error " + error,"error");
+};
+wSocket.onclose = function() {
+    document.notify("WebSocket: Connection closed",'warning');
+};
+
+const canvas = _("#graph");
+const ctx = canvas.getContext("2d");
+var time_per_div = 6;
+var _AnimationFrame;
+var volt_per_div = 0.03
+var axis_lebel_spaceX = 20;
+var axis_lebel_spaceY = 20;
+var positionX = 0;
+var positionY = 0;
+var pointerX = axis_lebel_spaceX;
+var pointerY = axis_lebel_spaceY;
+canvas.width = screen.width;
+
+//Auto scale (in-progress)
+function autoScale(){
+    var scaleFactor = (canvas.height/2)/(Math.max(...data_plot) - Math.min(...data_plot));
+    var scalingPosition  = (Math.min(...data_plot)+((Math.max(...data_plot) - Math.min(...data_plot))/2))*scaleFactor;
+    //console.log(scalingPosition)
+    positionY = scalingPosition-100 // sub 100 hardcoded for testing purpose ... must be a flexible solution
+    volt_per_div = scaleFactor
+    return scaleFactor;
+}
+//autoScale()
+
+var sqr_sum = 0;
+for(var i in data_plot){
+    sqr_sum += Math.pow(data_plot[i],2)
+}
+var data_Vrms = Math.sqrt(sqr_sum/data_plot.length);
+var data_Vavg = data_plot.reduce((acc, curr) => acc + curr, 0) / data_plot.length;
+var data_Vmax = Math.max(...data_plot);
+var data_Vmin = Math.min(...data_plot);
+var data_Vpp = data_Vmax - data_Vmin;
+console.log("Vrms :::",data_Vrms)
+console.log("Vavg :::",data_Vavg);
+console.log("Vmax :::",data_Vmax)
+console.log("Vmin :::",data_Vmin)
+console.log("Vp-p :::",data_Vpp)
+
+addEventListener('resize', () => {
+    canvas.width = screen.width;
+    data_plot.length = canvas.width*time_per_div;
+})
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawGraphAxis();
+    
+    ctx.beginPath();
+    ctx.moveTo(axis_lebel_spaceX, axis_lebel_spaceY);
+    
+    for (var I in data_plot) {
+        i = Number(I);
+        //if (i % 5) continue;  // Skip every other index for performance
+        var plot_x = Math.round(i / time_per_div) + axis_lebel_spaceX;
+        var plot_y = canvas.height - Math.round(data_plot[i] * volt_per_div) + axis_lebel_spaceY + positionY;
+        
+        ctx.lineTo(plot_x, plot_y);
+        
+        // Only for Testing perpose
+        /*if (graphPicks.indexOf(i) !== -1) {  // Mark every pick
+            ctx.fillText(i, plot_x, plot_y);
+        }*/
+        
+        
+        if (!(i % (100 * time_per_div))) {  // Mark every 100th data point
+            ctx.fillText(i, plot_x, axis_lebel_spaceY / 2);
+        }
+
+        if (plot_x > canvas.width) break;  // Stop if exceeding canvas width
+    }
+
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'red';
+    ctx.stroke();
+    
+    _AnimationFrame = requestAnimationFrame(draw);
+}
+
+draw();
+
+// Function to create grid on canvas
+function drawGraphAxis() {
+    ctx.lineWidth = 0.1;
+    
+    // Vertical grid lines
+    for (var i = 0; i < canvas.width; i += canvas.width / time_per_div) {
+        ctx.beginPath();
+        ctx.moveTo(i + axis_lebel_spaceX, axis_lebel_spaceY / 2);
+        ctx.lineTo(i + axis_lebel_spaceX, canvas.height + axis_lebel_spaceY);
+        ctx.strokeStyle = '#000';
+        ctx.stroke();
+    }
+    
+    // Horizontal grid lines
+    for (var i = 0; i < canvas.height - axis_lebel_spaceY; i += 30) {
+        ctx.beginPath();
+        ctx.moveTo(axis_lebel_spaceX, i + axis_lebel_spaceY);
+        ctx.lineTo(canvas.width + axis_lebel_spaceX, i + axis_lebel_spaceY);
+        ctx.fillText(i, 0, i + axis_lebel_spaceY);
+        ctx.strokeStyle = '#000';
+        ctx.stroke();
+    }
+    
+    // Draw axis pointers
+    ctx.lineWidth = 1;
+    
+    // Vertical pointer line
+    ctx.beginPath();
+    ctx.moveTo(pointerX, 0);
+    ctx.lineTo(pointerX, canvas.height);
+    ctx.strokeStyle = '#00f';
+    ctx.stroke();
+    
+    // Horizontal pointer line
+    ctx.beginPath();
+    ctx.moveTo(0, pointerY);
+    ctx.lineTo(canvas.width, pointerY);
+    ctx.strokeStyle = '#00f';
+    ctx.stroke();
+    
+    // Display pointer coordinates
+    ctx.fillText(
+        Math.round((pointerX - axis_lebel_spaceX) * time_per_div) + "," + (canvas.height - pointerY),
+        canvas.width / 2, axis_lebel_spaceX + 10
+    );
+}
+
+/*
+/
+/   TO BE Modified for mouse compatiblity
+/
+*/
+// x & y axis on touch
+//canvas.addEventListener("mousemove", pointerEvent)
+canvas.addEventListener("touchmove", pointerEvent)
+function pointerEvent() {
+    event.preventDefault();
+    const touch = event.type == "touchmove"?event.touches[0]:event;
+    const x = Math.round(touch.clientX - canvas.offsetLeft);
+    const y = Math.round(touch.clientY - canvas.offsetTop);
+
+    x > 0 && x < canvas.width-axis_lebel_spaceX && (pointerX = (event.type == "touchmove"?canvas.width-x:x));
+    y > 0 + axis_lebel_spaceY && y < canvas.height && (pointerY = y);
+};
+
+function _(o){
+    return document.querySelector(o);
+}
+
+/*TO DO's
+-include time, volt mul factor -- in ESP API
+-fix y axis scale
+- optimize code (make it flexible for wide range of application)
+- auto scale (max - min && find volt_per_div)
+- pack it in a Class
+
+*/
+
+// For Testing 
+// positionY = 200
+// time_per_div = 5.9
+\end{lstlisting}

@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WiFi Connect</title>
+  <script type="text/javascript" charset="utf-8">
+      //eruda.show()
+  </script>
+</head>
+<body>
+  <button onclick="startRecording()" id="startBtn">start</button>
+  <button onclick="logData([7,5,3,9])" id="stopBtn">stop</button>
+  <button id="retrieveBtn">retrive</button>
+  
+  <div id="result1"></div><br /><hr />
+  <div id="result2"></div>
+  <!-- <script src="databaseManager.js" type="application/javascript" charset="utf-8"></script> -->
+  
+  <!-- <script type="text/javascript" charset="utf-8">
+      class DataLogger {
+        constructor(dbName = "DataLoggerDB", storeName = "metadata") {
+            this.dbName = dbName;
+            this.db = null;
+            this.initDB();
+        }
+    
+        initDB() {
+            let request = indexedDB.open(this.dbName, 1);
+    
+            request.onupgradeneeded = (event) => {
+                let db = event.target.result;
+                if (!db.objectStoreNames.contains("metadata")) {
+                    db.createObjectStore("metadata", { keyPath: "id" });
+                }
+                if (!db.objectStoreNames.contains("chunks")) {
+                    db.createObjectStore("chunks", { keyPath: "chunkId" });
+                }
+            };
+    
+            request.onsuccess = (event) => {
+                this.db = event.target.result;
+                console.log("Database Initialised");
+            };
+    
+            request.onerror = event => console.error("IDB error:", event.target.error);
+        }
+    
+        logData(name, data) {
+            return new Promise((resolve, reject) => {
+                let transaction = this.db.transaction([this.storeName], "readwrite");
+                let store = transaction.objectStore(this.storeName);
+                
+                let entry = {
+                    name,
+                    startTime: new Date().toISOString(),
+                    endTime: null,
+                    data,
+                };
+    
+                let request = store.add(entry);
+                
+                request.onsuccess = (o) => resolve("Data logged successfully.");
+                request.onerror = (event) => reject("Error logging data: " + event.target.error);
+            });
+        }
+    
+        getData(name = null) {
+            return new Promise((resolve, reject) => {
+                let transaction = this.db.transaction([this.storeName], "readonly");
+                let store = transaction.objectStore(this.storeName);
+                let request = store.getAll();
+    
+                request.onsuccess = () => {
+                    let result = request.result;
+                    if (name) {
+                        result = result.filter((item) => item.name === name);
+                    }
+                    resolve(result);
+                };
+    
+                request.onerror = (event) => reject("Error retrieving data: " + event.target.error);
+            });
+        }
+    
+        deleteData(storeName, id) {
+            return new Promise((resolve, reject) => {
+                let transaction = this.db.transaction([storeName], "readwrite");
+                let store = transaction.objectStore(storeName);
+                let request = store.delete(id);
+                
+                request.onsuccess = () => resolve("Data deleted.");
+                request.onerror = (event) => reject("Error deleting data: " + event.target.error);
+            });
+        }
+    
+        downloadJSON(name = null) {
+            this.getData(name).then((data) => {
+                let blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+                let link = document.createElement("a");
+                link.href = URL.createObjectURL(blob);
+                link.download = "data_log.json";
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
+        }
+    }
+    const logger = new DataLogger();
+    
+    
+    
+    setTimeout(() => {
+        //logger.logData("Test9", [1, 2, 3, 4]).then(console.log);
+    }, 1000);
+    
+    setTimeout(() => {
+        logger.getData().then(console.log);
+    }, 2000);
+    
+    //!!!!---- Data is not appending , new entry created ---//
+    
+    
+    
+    //indexedDB.databases().then(o => o.forEach(o => indexedDB.deleteDatabase(o.name)))
+  </script> -->
+  
+  <script type="text/javascript" charset="utf-8">
+
+  
+  class IDBManager {
+    constructor({
+        dbName, dbVersion, onUpgrade
+    }) {
+        this.dbName = dbName;
+        this.dbVersion = dbVersion;
+        this.onUpgrade = onUpgrade;
+        this.db = null;
+    }
+
+    open() {
+        if (this.db) return Promise.resolve(this.db);
+
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(this.dbName, this.dbVersion);
+
+            request.onerror = () => reject(request.error);
+            request.onblocked = () => reject(new Error('Database upgrade blocked'));
+
+            request.onsuccess = (event) => {
+                this.db = event.target.result;
+                resolve(this.db);
+            };
+
+            request.onupgradeneeded = (event) => {
+                this.db = event.target.result;
+                if (typeof this.onUpgrade === 'function') {
+                    this.onUpgrade(
+                        this.db,
+                        event.oldVersion,
+                        event.newVersion,
+                        event.target.transaction
+                    );
+                }
+            };
+        });
+    }
+
+    async add(storeName,
+        item) {
+        await this.open();
+        return this._executeTransaction(storeName,
+            'readwrite',
+            (store) => {
+                return store.add(item);
+            });
+    }
+
+    async get(storeName,
+        id) {
+        await this.open();
+        return this._executeTransaction(storeName,
+            'readonly',
+            (store) => {
+                return store.get(id);
+            });
+    }
+
+    async update(storeName,
+        id,
+        updates) {
+        await this.open();
+        return this._executeTransaction(storeName,
+            'readwrite',
+            async (store) => {
+                const request = await store.get(id);
+                request.onsuccess = o => {
+                    var item = o.target.result;
+                    Object.assign(item, updates);
+                    store.put(item);
+                }
+            });
+    }
+
+    async delete(storeName,
+        id) {
+        await this.open();
+        return this._executeTransaction(storeName,
+            'readwrite',
+            (store) => {
+                return store.delete(id);
+            });
+    }
+
+    async getAll(storeName) {
+        await this.open();
+        return this._executeTransaction(storeName,
+            'readonly',
+            (store) => {
+                return store.getAll();
+            });
+    }
+
+    async clear(storeName) {
+        await this.open();
+        return this._executeTransaction(storeName,
+            'readwrite',
+            (store) => {
+                return store.clear();
+            });
+    }
+
+    async _executeTransaction(storeName,
+        mode,
+        operation) {
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(storeName, mode);
+            const store = transaction.objectStore(storeName);
+
+            const request = operation(store);
+            request.onerror = () => reject(request.error);
+
+            transaction.oncomplete = (e) => resolve(request.result);
+            transaction.onerror = () => reject(transaction.error);
+        });
+    }
+
+    close() {
+        if (this.db) {
+            this.db.close();
+            this.db = null;
+        }
+    }
+}
+
+
+
+
+
+// Initialize database
+const dbManager = new IDBManager({
+    dbName: 'EcgRecordings',
+    dbVersion: 1,
+    onUpgrade: (db, oldVersion, newVersion, transaction) => {
+        if (!db.objectStoreNames.contains('metadata')) {
+            const store = db.createObjectStore('metadata', {
+                keyPath: 'id', autoIncrement: true
+            });
+        }
+
+        if (!db.objectStoreNames.contains('dataChunks')) {
+            const store = db.createObjectStore('dataChunks', {
+                keyPath: 'id', autoIncrement: true
+            });
+        }
+    }
+});
+
+
+var dbVariables = {
+    chunkNo: 0,
+    metadataID: null,
+    prevChunkID: null
+};
+
+//indexedDB.databases().then(console.log)
+
+async function startRecording() {
+    dbVariables.metadataID = await dbManager.add('metadata',
+        {
+            name: 'John Doe',
+            startTime: new Date().toISOString(),
+            endTime: null,
+            dataChunkId: null
+        });
+
+    dbVariables.chunkNo = 0;
+    dbVariables.prevChunkID = null;
+}
+
+async function logData(data) {
+    dbVariables.chunkNo++;
+    var currChunkID = await dbManager.add('dataChunks',
+        {
+            data: data,
+            chunkNo: dbVariables.chunkNo
+        });
+    if (dbVariables.chunkNo == 1) {
+        await dbManager.update('metadata', dbVariables.metadataID, {
+            dataChunkId: currChunkID
+        });
+    } else {
+        await dbManager.update('dataChunks', dbVariables.prevChunkID, {
+            nextChunkId: currChunkID
+        });
+    }
+    await dbManager.update('metadata', dbVariables.metadataID, {
+        endTime: new Date().toISOString()
+    });
+    dbVariables.prevChunkID = currChunkID;
+
+
+    document.getElementById("result1").innerText = JSON.stringify(await dbManager.getAll('metadata'),null,2)
+    document.getElementById("result2").innerText = JSON.stringify(await dbManager.getAll('dataChunks'),null,2)
+    console.log('metadata:', await dbManager.getAll('metadata'));
+    console.log('dataChunks:', await dbManager.getAll('dataChunks'));
+}
+
+/* // Get user
+        const user = await dbManager.get('metadata', userId);
+        console.log('User:', user);
+        // Update user
+        await dbManager.update('metadata', userId, { name: 'John Updated' });
+        // Get all users
+        const allUsers = await dbManager.getAll('metadata');
+        console.log('All users:', allUsers);
+        dbManager.close();*/
+
+/*(async () => {
+console.log('metadata:', JSON.stringify(await dbManager.getAll('metadata')));
+console.log('dataChunks:', JSON.stringify(await dbManager.getAll('dataChunks')));
+})();*/
+
+//dbManager.clear('metadata');
+//dbManager.clear('dataChunks');
+
+
+//startRecording();
+//logData([7,5,3,9]);
+  
+  
+  </script>
+      <script type="text/javascript" charset="utf-8">
+
+
+//*
+fetch('https://chat.botpress.cloud/49f49b18-dc9a-4e9e-abbc-a106f9190a04/messages', {
+  method: 'POST',
+  headers: {
+    accept: 'application/json',
+    'x-user-key': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InVzZXJfMDFKTUY3S1IwQUpHUlc3UEpTQTk0N0UwSloiLCJpYXQiOjE3Mzk5NzMwNTh9.CTDxkazNNM4NJk7sF2Vbg8xro53h61Z1IyDeMc9leKg',
+    'content-type': 'application/json'
+  },
+  body: JSON.stringify({
+    payload: {type: 'text', text: 'heart rate 67'},
+    conversationId: 'user_01JMF7KR0AJGRW7PJSA947E0JZ'
+  })
+}).then(res => console.log(res.json())).catch(err => console.error(err));
+  
+  
+  
+  
+  /*.then(() => setTimeout(() => {fetch('https://chat.botpress.cloud/49f49b18-dc9a-4e9e-abbc-a106f9190a04/conversations/user_01JMF7KR0AJGRW7PJSA947E0JZ/messages', {
+  method: 'GET',
+  headers: {
+    accept: 'application/json',
+    'x-user-key': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InVzZXJfMDFKTUY3S1IwQUpHUlc3UEpTQTk0N0UwSloiLCJpYXQiOjE3Mzk5NzMwNTh9.CTDxkazNNM4NJk7sF2Vbg8xro53h61Z1IyDeMc9leKg'
+  }
+}).then(res => res.json())
+//  .then(res => console.log(res.messages[0].payload.text))
+  .then(res => console.log(res.messages))
+  .catch(err => console.error(err))
+  },5000));*/
+  
+  
+  /*
+  const options = ;
+
+fetch('https://chat.botpress.cloud/49f49b18-dc9a-4e9e-abbc-a106f9190a04/conversations/user_01JMF7KR0AJGRW7PJSA947E0JZ/listen', options)
+  .then(res => res.json())
+  .then(res => console.log(res))
+  .catch(err => console.error(err));*/
+  
+  
+  
+  
+  
+async function startSSE() {
+    try {
+        const response = await fetch("https://chat.botpress.cloud/49f49b18-dc9a-4e9e-abbc-a106f9190a04/conversations/user_01JMF7KR0AJGRW7PJSA947E0JZ/listen", {
+          method: 'GET',
+          headers: {
+            accept: 'application/json',
+            'x-user-key': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InVzZXJfMDFKTUY3S1IwQUpHUlc3UEpTQTk0N0UwSloiLCJpYXQiOjE3Mzk5NzMwNTh9.CTDxkazNNM4NJk7sF2Vbg8xro53h61Z1IyDeMc9leKg'
+          }
+        });
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            decoder.decode(value).match(/\{.*\}/).forEach(o => {
+            const data = JSON.parse(o).data;
+            if(data){
+                data.isBot && console.log(data.payload.text);
+            }})
+        }
+    } catch (e) {
+        console.error("SSE connection failed:", e);
+    }
+}
+
+startSSE();
+
+  
+
+  
+  
+    </script>
+    
+    
+</body>
+</html>

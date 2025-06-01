@@ -1,0 +1,1199 @@
+\addcontentsline{toc}{chapter}{Annexure}
+\appendix
+\chapter*{\centering \large Annexure A}
+\subsection*{Microcontroller program}
+\begin{lstlisting}[style=htmlcssjs, language=CPP]
+#include <DNSServer.h>
+#include <WebSocketsServer.h>
+#include <ESP8266WebServer.h>
+// #include <ESP8266mDNS.h>
+
+const byte DNS_PORT = 53;
+IPAddress apIP(172, 217, 28, 1);
+DNSServer dnsServer;
+ESP8266WebServer server(80);
+WebSocketsServer webSocket = WebSocketsServer(81);
+
+
+// ADC buffer and indexing variables
+int *adcBuffer = nullptr;    // Dynamic buffer pointer
+int sampleIndex = 0;
+int sps = 10;                // Default saadcBuffermples per second
+unsigned long previousMillis = 0;
+const long sendInterval = 300;   // Time interval to send data (333ms)
+
+unsigned long lastSampleTime = 0;  // Time of last sample
+long sampleInterval = 1000 / sps;  // Interval between each sample based on SPS
+
+
+String webServerIndexPage = "[WEB UI CODE]";
+String webServerSW = "[SERVISE WORKER JS]";
+
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t length) {
+
+    switch (type) {
+        case WStype_DISCONNECTED:
+        Serial.printf("[%u] Disconnected!\n", num);
+        break;
+        case WStype_CONNECTED:
+        {
+            IPAddress ip = webSocket.remoteIP(num);
+            Serial.printf("[%u] Connected from %d.%d.%d.%d url: %s\n", num, ip[0], ip[1], ip[2], ip[3], payload);
+        }
+        break;
+        case WStype_TEXT:
+        Serial.printf("[%u] get Text: %s\n", num, payload);
+
+        //int arrayLen = payload - 0;
+        int newSps = atoi((const char*)payload);
+
+        // Try to parse the samples per second (SPS) from the message
+        if (newSps > 0 && newSps != sps) {
+            // Adjust the number of samples per second if needed
+            sps = newSps;
+
+            // Reallocate the ADC buffer with the new size
+            if (adcBuffer != nullptr) {
+                free(adcBuffer); // Free old buffer
+            }
+            adcBuffer = (int *)malloc(sps * sizeof(int)); // Allocate new buffer
+
+            // Update sampling interval based on SPS
+            sampleInterval = 1000 / sps;
+
+            Serial.print("New SPS: ");
+            Serial.println(sps);
+        }
+
+
+        break;
+    }
+}
+
+void handleNotFound() {
+    server.sendHeader("Location", "/", true); //Redirect to our html web page
+    server.send(301, "text/plane", "");
+}
+
+
+void setup() {
+    Serial.begin(115200);
+
+    // Serial.setDebugOutput(true);
+
+    Serial.println();
+    Serial.println();
+    Serial.println();
+
+    for (uint8_t t = 4; t > 0; t--) {
+        Serial.printf("[SETUP] BOOT WAIT %d...\n", t);
+        Serial.flush();
+        delay(1000);
+    }
+
+    adcBuffer = (int *)malloc(sps * sizeof(int));
+
+    WiFi.mode(WIFI_AP);
+    WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
+    WiFi.softAP("Micro_ECG_RANMPGroupF");
+    // start webSocket server
+    webSocket.begin();
+    webSocket.onEvent(webSocketEvent);
+
+    // if (MDNS.begin("esp8266")) {
+    //   Serial.println("MDNS responder started");
+    // }
+    dnsServer.start(DNS_PORT, "*", apIP);
+    // handle index
+    server.on("/", []() {
+        server.send(200, "text/html", webServerIndexPage);
+    });
+    server.on("/sw.js", []() {
+        server.send(200, "application/javascript", webServerSW);
+    });
+
+    server.on("/test", []() {
+        server.sendHeader("Location", "https://github.io/", true);
+        server.send(302, "text/plane", "Redirecting...");
+    });
+
+    server.onNotFound(handleNotFound);
+    server.begin();
+    
+    // // Add service to MDNS
+    // MDNS.addService("http", "tcp", 80);
+    // MDNS.addService("ws", "tcp", 81);
+    
+}
+
+unsigned long last_10sec = 0;
+unsigned int counter = 0;
+
+void loop() {
+    unsigned long t = millis();
+    webSocket.loop();
+    dnsServer.processNextRequest();
+    server.handleClient();
+
+    // if ((t - last_10sec) > 10 * 1000) {
+    //     counter++;
+    //     bool ping = (counter % 2);
+    //     int i = webSocket.connectedClients(ping);
+    //     Serial.printf("%d Connected websocket clients ping: %d\n", i, ping);
+    //     last_10sec = millis();
+    // }
+
+    // Check if it's time to sample ADC data based on SPS
+    unsigned long currentMillis = millis();
+
+    if (currentMillis - lastSampleTime >= sampleInterval) {
+        // Read ADC and store it in buffer
+        adcBuffer[sampleIndex] = analogRead(A0);
+        sampleIndex++;
+        // Reset buffer and send data every 333ms
+        if (sampleIndex >= sps) {
+            Serial.printf("147................................");
+            sendSamplesThroughWebSocket(adcBuffer, sps);
+            sampleIndex = 0; // Reset buffer index
+        }
+
+        lastSampleTime = currentMillis;
+    }
+    // //Send data every 333ms
+    if (currentMillis - previousMillis >= sendInterval) {
+        if (sampleIndex > 0) {
+            sendSamplesThroughWebSocket(adcBuffer, sampleIndex);
+            sampleIndex = 0; // Reset buffer index
+        }
+        previousMillis = currentMillis;
+    }
+}
+
+// Function to send ADC samples via WebSocket
+void sendSamplesThroughWebSocket(int *samples, int count) {
+  // Create a buffer to hold raw data (binary format)
+  uint8_t buffer[count * sizeof(int)];
+  memcpy(buffer, samples, count * sizeof(int));  // Copy ADC samples to buffer
+
+  // Send the buffer as a binary message over WebSocket
+  webSocket.broadcastBIN(buffer, count * sizeof(int));
+}
+\end{lstlisting}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\subsection*{Web Development for UI}
+\subsubsection*{HTML}
+\begin{lstlisting}[style=htmlcssjs]
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Micro ECG</title>
+</head>
+<body>
+    <noscript>
+        Please Enable JavaScript in your browser...!!
+    </noscript>
+    <div class="container">
+        <div class="header">
+            <h1>Micro ECG &hearts;(Alpha)</h1>
+        </div>
+        <div id="snap-container" class="snap-container"></div>
+        <div class="canvas-container">
+            <canvas id="ecgCanvas"></canvas>
+        </div>
+        <div class="tabs">
+            <button active data-id="parameters">PARAMETERS</button>
+            <button data-id="ai-assistant">AI</button>
+            <button data-id="controls">CONTROLS</button>
+            <button data-id="recordings">RECORDINGS</button>
+            <button data-id="settings" disabled>SETTINGS</button>
+        </div>
+        <div class="tab-contents">
+            <div active class="parameters">
+                <!-- <div class="parameter">
+                    <input type="range" oninput="" value="" />
+                </div> -->
+                <div class="parameter">
+                    <span>Result: <span id="param-result"> •_° </span> </span>
+                </div>
+                <div class="parameter">
+                    <span>Heart Rate: <span id="param-hr"> •_° </span> bpm</span>
+                </div>
+                <div class="parameter">
+                    <span>QRS Duration: <span id="param-qrs"> •_° </span> ms</span>
+                </div>
+                <div class="parameter">
+                    <span>QT Interval: <span id="param-qt"> •_° </span> ms</span>
+                </div>
+                <div class="parameter">
+                    <span>PR Interval: <span id="param-pr"> •_° </span> ms</span>
+                </div>
+                <div class="parameter">
+                   <span> ST Interval: <span id="param-st"> •_° </span> ms </span>
+                </div>
+            </div>
+            <div class="ai-assistant">
+                <h2>AI Assistant</h2>
+                <p id="ai-output"></p>
+                <button id="ai-assistBtn">&#x27F3; Get Assistance</button>
+            </div>
+            <div class="controls">
+                <div style="width:100%" class="control"></div>
+                <div class="control pushButton" data-toggle="isHold">
+                    <span>HOLD</span>
+                </div>
+                <div id="recordBtn" class="control pushButton">
+                    <span>RECORD</span>
+                </div>
+                <div class="control" onclick="data_plot = []">
+                    <span>CLEAR</span>
+                </div>
+                <div id="takeSnapBtn" class="control">
+                    <span>SNAP</span>
+                </div>
+                <div style="width:100%" class="control"></div>
+                <div class="control">
+                    <span>TIME/DIV</span><br /> &minus; <input class="multiturn minZero" type="range" oninput="scale.x = this.dataset.value/10" min="0" max="100" data-default="50" value="50"/> &plus;
+                </div>
+                <div class="control">
+                    <span>VOLT/DIV</span><br /> &minus; <input class="multiturn" type="range" oninput="scale.y = this.dataset.value/10" min="0" max="100" data-default="120" value="50"/> &plus;
+                </div>
+                <div class="control">
+                    <span>POSITION VERTICAL</span><br /> &#9650; <input class="multiturn" type="range" oninput="move.y = this.dataset.value*10" min="0" max="100" data-default="13" value="50"/> &#9660;
+                </div>
+                <div class="control">
+                    <span>POSITION HORIZONTAL</span><br /> &#9198; <input class="multiturn minZero" type="range" oninput="move.x = this.dataset.value*10" min="0" max="100" data-default="0" value="50"/> &#9197;
+                </div>
+                <div style="width:100%" class="control"></div>
+            </div>
+            <div class="flexbox recordings">
+                <div style="width:100%" class="flexbox"><label for="">IMPORT(.json)</label><input id="recordingImport" type="file" accept=".json"/></div>
+                <div id="recordings" class="flexbox">
+                    <div class="flexbox">
+                        <div class="pushButton">NO RECORD FOUND<br /><sub>mm:hh dd-mm-yyyy</sub></div>
+                        <div class="download">&#x2913;</div>
+                        <div class="download">x</div>
+                    </div>
+                </div>
+            </div>
+            <!-- <div class="settings">
+                <div class="setting network">
+                    <h2>Network</h2>
+                    <h3>Available Access Points...</h3><button id="refresh-AP">Refresh</button>
+                    <div id="wifi-list">
+                        <div>SSID(signal) <button>Connect</button></div>
+                        <div>SSID(signal) <button>Connect</button></div>
+                        <div>SSID(signal) <button>Connect</button></div>
+                    </div>
+                    <h4>Connect to Hidden Network</h4>
+                    <form id="hidden-network-form">
+                      <input type="text" id="ssid" placeholder="SSID" required><br />
+                      <input type="password" id="password" placeholder="Password" required><br />
+                      <button type="submit">Connect</button>
+                    </form>
+                </div>
+                <div class="setting">
+                    <h2>Hardware</h2>
+                    Samples Per Second: <input style="width:50px" placeholder="999" type="number"/>
+                    <hr /><hr />
+                    <button class="danger" style="background-color:#f005,border">Reset</button>
+                </div>
+            </div> -->
+        </div>
+        <div class="footer">
+            <a href="#" onclick="window.open('/','_blank)">Open in External Browser(Android Only)</a>
+            <p style="display:block;background-color:#eee;"><b>Disclaimer:</b> The project is not designed nor certified to diagnose any serious problem.
+            We, the creators, developers, and distributors of this App/Website/device are not liable for any inaccuracies, misinterpretations, or adverse outcomes resulting from its use. Use of the App/Website/device is at your own risk and discretion.</p>
+        </div>
+    </div>
+</body>
+</html>
+\end{lstlisting}
+
+
+
+
+
+\subsubsection*{CSS}
+\begin{lstlisting}[style=htmlcssjs]
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+body {
+    background: #f4f4f9;
+    color: #333;
+}
+button , input{
+    padding: 3px 9px;
+    margin: 5px;
+    background-color: #f4f4f9;
+    border: 0.1px solid #00f;
+    box-shadow: 2px 2px 2px gray;
+}
+button:hover , input:hover{
+   box-shadow: none;
+}
+.pushButton[active]{
+    background-color: #0f05;
+}
+.container {
+    max-width: 1200px;
+    margin: 20px auto;
+    padding: 20px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+.header {
+    text-align: center;
+    padding: 10px 0;
+    border-bottom: 2px solid #e0e0e0;
+}
+.header h1 {
+    font-size: 2rem;
+    color: #007bff;
+}
+.snap-container{
+    width: 100%;
+    margin: auto;
+}
+.canvas-container {
+    margin-top: 20px;
+    text-align: center;
+    position: sticky; 
+    top: 0px;
+    pointer-events: none;
+    background-color: #fff5;
+}
+canvas, .snap-container img {
+    border: 1px solid #ddd;
+    width: 100%;
+    height: 100px;
+}
+.tabs{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.tabs button {
+    margin: 0px;
+    flex: 1 1 auto;
+}
+.tabs button[active] {
+    box-shadow: none;
+    border: none;
+}
+.tab-contents>div:not([active]) {
+    display: none;
+}
+.parameters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    padding: 20px 0;
+}
+.parameter {
+    flex: 1 1 auto;
+    background: #f9f9f9;
+    padding: 10px;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    min-width: 30%;
+}
+.parameter span {
+    font-size: 1rem;
+    color: #555;
+    font-weight: bold;
+    white-space: nowrap;
+}
+.controls , .settings, .flexbox{
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+.control , .flexbox div, .setting{
+    flex: 1 1 auto;
+    text-align: center;
+    padding: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+.ai-assistant {
+    margin: 20px 0;
+    background: #e7f5ff;
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+.ai-assistant h2 {
+    font-size: 1.5rem;
+    color: #00f;
+}
+.ai-assistant p {
+    font-size: 1rem;
+    color: #444;
+    margin-top: 10px;
+}
+.footer {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 0.7rem;
+    color: #333;
+}
+.danger {
+    color: red!important;
+    border-color: red!important;
+}
+@media (max-width: 668px) {
+    .parameters {
+        flex-direction: column;
+    }
+    .flexbox{
+        width: 100%;
+    }
+}
+\end{lstlisting}
+
+
+
+
+\subsubsection*{JavaScript}
+\begin{lstlisting}[style=htmlcssjs]
+//var data_plot = [0,1200,0,1200,0,1200];
+var data_plot = new Array(200).fill(3300);
+//var data_plot = new Array(200).fill(1600);
+
+// --- HELPERS --- //
+document.querySelectorAll(".pushButton").forEach(o => {
+    o.addEventListener('click', (e) => {
+        o.hasAttribute('active') ? o.removeAttribute('active'):o.setAttribute('active','');
+        window[o.dataset.toggle] = o.hasAttribute('active');
+        //window[o.dataset.toggle] || e.stopPropagation();
+    },true)
+});
+
+document.querySelectorAll('.multiturn').forEach(o=> {
+    let disp = Number(o.dataset.default);
+    const max = Number(o.max);
+    const min = Number(o.min);
+
+    o.addEventListener('change', () => {
+        if (o.value <= min && !(o.classList.contains('minZero') && disp <= 0)) {
+            o.value = max/2;
+            disp -= max/2
+        }
+        if (o.value >= max) {
+            o.value = max/2;
+            disp += max/2
+        }
+    });
+    o.addEventListener('input', () => {
+        if(o.classList.contains('minZero') && disp + Number(o.value-(max/2))  <= 0) return 0;
+        o.dataset.value = disp + Number(o.value-(max/2));
+    });
+});
+
+// ---- Custom alert and prompt ----//
+(() => {
+  const a = document.createElement("div");
+  a.style = "position:fixed;top:0;left:0;width:100%;height:100%;background:#0005;display:flex;justify-content:center;align-items:center;visibility:hidden;z-index:1000;";
+
+  const b = document.createElement("div");
+  b.style = "background:white;padding:20px;border-radius:5px;text-align:center;box-shadow:0 2px 5px rgba(0,0,0,0.3);width:250px;";
+
+  const c = document.createElement("p");
+  const d = document.createElement("input");
+  d.type = "text";
+  d.style = "display:none;margin-bottom:15px;padding:5px;width:100%;";
+
+  const e = document.createElement("button");
+  e.textContent = "OK";
+  e.style = "background:#007bff;color:white;";
+
+  const f = document.createElement("button");
+  f.textContent = "Cancel";
+  f.style = "background:#dc3545;color:white;display:none;";
+
+  b.append(c, d, e, f);
+  a.appendChild(b);
+  document.body.appendChild(a);
+
+  window.alert = msg => { c.textContent = msg; d.style.display = "none"; f.style.display = "none"; e.onclick = () => a.style.visibility = "hidden"; a.style.visibility = "visible"; };
+  window.prompt = (msg, cb=(o=>{return false}),cc=(o=>{return false})) => { c.textContent = msg; d.style.display = "block"; f.style.display = "inline-block"; d.value = ""; e.onclick = () => { a.style.visibility = "hidden"; cb(d.value); }; f.onclick = () => {a.style.visibility = "hidden";cc(); }; a.style.visibility = "visible"; };
+})();
+
+// ---- Custom Notification ----//
+(() => {
+    document.head.appendChild(Object.assign(document.createElement('style'), { innerHTML: `
+        .notify-container {
+            width: 100%; max-height: 230px; overflow: scroll; display: flex; flex-direction: column;
+            align-items: center; position: fixed; top: 10px; left: 0; pointer-events: none;
+        }
+        .notify-container > div {
+            max-width: 400px; margin: 10px; border-radius: 5px; text-align: center; padding: 10px 20px;
+            background: #eef; color: #00f; position: relative; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            transition: transform 0.5s; pointer-events: auto;
+        }
+        .notify-container > div:hover { transform: translateY(10%); }
+        .notifyClose { position: absolute; right: 5px; bottom: 25%; font-weight: bold; cursor: pointer; }
+    `}));
+
+    let container = document.body.appendChild(Object.assign(document.createElement('div'), { className: "notify-container" }));
+
+    document.notify = (t = '', c, s) => {
+        let div = Object.assign(document.createElement('div'), { innerText: t });
+        div.appendChild(Object.assign(document.createElement('div'), { className: "notifyClose", innerText: "×", onclick: () => div.remove() }));
+        div.style = { error: 'background:#fdd;color:#f00;', warning: 'background:#ffc;color:#f00;', success: 'background:#cfc;color:#080;' }[c] || '';
+        setTimeout(() => div.remove(), s || (container.innerText.length + t.length) * 200);
+        container.appendChild(div);
+    };
+})();
+
+
+var recordingQue = {
+    count:0,
+    data:[]
+}
+async function feedData(arr) {
+    //let sps = 333;
+    //let i = 0, t = await setInterval(() => (i < arr.length && !isHold) ? data_plot.push(arr[i++]) : clearInterval(t), 1000 / sps);
+
+    isHold || data_plot.push(...arr)
+    if(isRecording){
+        recordingQue.data.push(...arr);
+        recordingQue.count++;
+        if(!(recordingQue.count%10)){
+            logData(recordingQue.data);
+            recordingQue.data = [];
+        }
+    }
+}
+
+
+
+
+
+
+
+const wSocket = new WebSocket('ws://172.217.28.1:81');
+//const wSocket = new WebSocket('ws://'+location.hostname+':81');
+wSocket.binaryType = 'arraybuffer';
+wSocket.onopen = function() {
+    document.notify('WebSocket: Connection established!', 'success'); wSocket.send(300);
+};
+wSocket.onmessage = function(event) {
+    const data = new Uint16Array(event.data);
+    let adcValues = [];
+    for (let i = 0; i < data.length; i += 2) {
+        let value = data[i] | (data[i + 1] << 8);
+        adcValues.push((value*1.4)+1600);
+    }
+    feedData(adcValues,300);
+};
+wSocket.onerror = function(error) {
+    document.notify('WebSocket: Error ' + error, 'error');
+};
+wSocket.onclose = function() {
+    document.notify('WebSocket: Connection closed', 'warning');
+}; 
+//setInterval(() => feedData(new Array(100).fill(1840)) ,1000)
+//setInterval(() => feedData([Math.random()*3000,Math.random()*3000,Math.random()*3000,Math.random()*3000,Math.random()*3000,Math.random()*3000,Math.random()*3000,Math.random()*3000,Math.random()*3000,Math.random()*3000,Math.random()*3000,Math.random()*3000,Math.random()*3000,Math.random()*3000,Math.random()*3000,80]) ,300)
+
+
+
+// ---- Init ----//
+var graphCanvas = document.getElementById("ecgCanvas");
+var ctx = graphCanvas.getContext('2d');
+var scale = {x:5,y:12};//y:8.6
+var move = {x:0,y:130};//y:0
+var isHold = false;
+var isRecording = false;
+var recording = [];
+var ECGResult = [];
+
+// ---- Responsive Canvas ----//
+graphCanvas.width = graphCanvas.offsetParent.offsetWidth;
+addEventListener('resize', () => {
+    graphCanvas.width = graphCanvas.offsetParent.offsetWidth;
+})
+
+
+// ---- service worker ----//
+if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("./sw.js").catch(console.log);
+}
+
+// ---- Plot Graph ----//
+function render() {
+    ctx.clearRect(0, 0, graphCanvas.width, graphCanvas.height);
+    
+    
+    // virtualCanvas
+    var VC = data_plot.slice(-graphCanvas.width*scale.x-move.x,-1-move.x);
+    VC = VC.map(o => {
+        return o/scale.y-move.y
+    });
+    
+    ECGResult = ECGinterpreter(VC,500);
+    
+    ctx.beginPath();
+    ctx.moveTo(...OLB(0, VC[0]));
+    
+    for(var i=0; i < VC.length;i++){
+       ctx.lineTo(...OLB(i/scale.x, VC[i]));
+    }
+    ctx.strokeStyle = "red";
+    ctx.stroke();
+    
+    function OLB(x , y) {
+        // origin Left - Bottom
+        return [x , graphCanvas.height-y];
+    }
+    
+   requestAnimationFrame(render);
+}
+setTimeout(render,100);
+
+
+
+// --- NEVIGATION - TABS --- //
+(() => {
+const tabs = document.querySelectorAll('.tabs>button');
+const contents = document.querySelectorAll('.tab-contents>div');
+
+tabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    tabs.forEach(t => t.removeAttribute('active'));
+    contents.forEach(c => c.removeAttribute('active'));
+    tab.setAttribute('active','');
+    document.querySelector('.' + tab.dataset.id).setAttribute('active','');
+})})
+})();
+
+
+
+document.getElementById("takeSnapBtn").addEventListener('click',()=>{
+    const img = document.createElement('img');
+    img.src = graphCanvas.toDataURL("image/png");
+    img.addEventListener('click',img.remove);
+    document.getElementById("snap-container").appendChild(img);
+    prompt("Save SNAPSHOT As:",(name)=>{
+    dbManager.add('metadata',
+    {
+        name: name || "SNAPSHOT",
+        startTime: new Date().toISOString(),
+        snapURL: img.src,
+        type: "snapshot"
+    })})
+});
+
+
+
+// ---- IndexedDB Manager ----//
+class IDBManager {
+    constructor({
+        dbName, dbVersion, onUpgrade
+    }) {
+        this.dbName = dbName;
+        this.dbVersion = dbVersion;
+        this.onUpgrade = onUpgrade;
+        this.db = null;
+        this.changeEventListeners = [];
+    }
+
+    open() {
+        if (this.db) return Promise.resolve(this.db);
+
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(this.dbName, this.dbVersion);
+
+            request.onerror = () => reject(request.error);
+            request.onblocked = () => reject(new Error('Database upgrade blocked'));
+
+            request.onsuccess = (event) => {
+                this.db = event.target.result;
+                resolve(this.db);
+            };
+
+            request.onupgradeneeded = (event) => {
+                this.db = event.target.result;
+                if (typeof this.onUpgrade === 'function') {
+                    this.onUpgrade(
+                        this.db,
+                        event.oldVersion,
+                        event.newVersion,
+                        event.target.transaction
+                    );
+                }
+            };
+        });
+    }
+
+    async add(storeName, item) {
+        await this.open();
+        this.changeEventListener(storeName);
+        return this._executeTransaction(storeName,
+            'readwrite',
+            (store) => {
+                return store.add(item);
+        });
+    }
+
+    async get(storeName, id) {
+        await this.open();
+        return this._executeTransaction(storeName,
+            'readonly',
+            (store) => {
+                return store.get(id);
+        });
+    }
+
+    async update(storeName, id, updates) {
+        await this.open();
+        this.changeEventListener(storeName);
+        return this._executeTransaction(storeName,
+            'readwrite',
+            async (store) => {
+                const request = await store.get(id);
+                request.onsuccess = o => {
+                    var item = o.target.result;
+                    Object.assign(item, updates);
+                    store.put(item);
+                }
+        });
+    }
+
+    async delete(storeName, id) {
+        await this.open();
+        this.changeEventListener(storeName);
+        return this._executeTransaction(storeName,
+            'readwrite',
+            (store) => {
+                return store.delete(id);
+        });
+    }
+
+    async getAll(storeName) {
+        await this.open();
+        return this._executeTransaction(storeName,
+            'readonly',
+            (store) => {
+                return store.getAll();
+            });
+    }
+
+    async clear(storeName) {
+        await this.open();
+        this.changeEventListener(storeName);
+        return this._executeTransaction(storeName,
+            'readwrite',
+            (store) => {
+                return store.clear();
+        });
+    }
+    changeEventListener(storeName) {
+        this.changeEventListeners.forEach(o => o.storeName == storeName && o.action());
+    }
+    addChangeEventListener(o,sn) {
+        this.changeEventListeners.push({
+            action : o,
+            storeName: sn
+        });
+    }
+    async _executeTransaction(storeName, mode, operation) {
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(storeName, mode);
+            const store = transaction.objectStore(storeName);
+
+            const request = operation(store);
+            request.onerror = () => reject(request.error);
+
+            transaction.oncomplete = (e) => {
+                resolve(request.result);
+            };
+            transaction.onerror = () => reject(transaction.error);
+        });
+    }
+
+    close() {
+        if (this.db) {
+            this.db.close();
+            this.db = null;
+        }
+    }
+}
+
+
+
+// ---- Manage Recording ----//
+const dbManager = new IDBManager({
+    dbName: 'EcgRecordings',
+    dbVersion: 1,
+    onUpgrade: (db, oldVersion, newVersion, transaction) => {
+        if (!db.objectStoreNames.contains('metadata')) {
+            const store = db.createObjectStore('metadata', {
+                keyPath: 'id', autoIncrement: true
+            });
+        }
+
+        if (!db.objectStoreNames.contains('dataChunks')) {
+            const store = db.createObjectStore('dataChunks', {
+                keyPath: 'id', autoIncrement: true
+            });
+        }
+    }
+});
+
+var dbVariables = {
+    chunkNo: 0,
+    metadataID: null,
+    prevChunkID: null
+};
+
+async function startRecording(name) {
+    dbVariables.metadataID = await dbManager.add('metadata',
+        {
+            name: name || "RECORD",
+            startTime: new Date().toISOString(),
+            endTime: null,
+            dataChunkId: null,
+            type: "dataStream"
+        });
+    dbVariables.chunkNo = 0;
+    dbVariables.prevChunkID = null;
+    isRecording = true
+}
+
+async function logData(data) {
+    dbVariables.chunkNo++;
+    var currChunkID = await dbManager.add('dataChunks',
+        {
+            data: data,
+            chunkNo: dbVariables.chunkNo
+        });
+    if (dbVariables.chunkNo == 1) {
+        await dbManager.update('metadata', dbVariables.metadataID, {
+            dataChunkId: currChunkID
+        });
+    } else {
+        await dbManager.update('dataChunks', dbVariables.prevChunkID, {
+            nextChunkId: currChunkID
+        });
+    }
+    await dbManager.update('metadata', dbVariables.metadataID, {
+        totalChunks: dbVariables.chunkNo,
+        endTime: new Date().toISOString()
+    })
+    dbVariables.prevChunkID = currChunkID;
+}
+
+document.getElementById("recordBtn").addEventListener('click',(e) => {
+    const recordBtn = e.currentTarget;
+    isRecording = false
+    if(recordBtn.hasAttribute("active")){
+        prompt("Save RECORDING As:",startRecording,() => recordBtn.removeAttribute("active"));
+    }
+})
+
+
+//dbManager.getAll('metadata').then(console.log)
+//dbManager.getAll('dataChunks').then(console.log)
+
+
+async function updateRecordingUI() {
+    const metadata = await dbManager.getAll("metadata");
+    const recordingsDIV = document.getElementById("recordings");
+    recordingsDIV.innerText = metadata.length ? '':'NO DATA FOUND!!';
+    metadata.forEach((o) => {
+        const flexBox = document.createElement("div");
+        flexBox.className = "flexbox";
+        
+        const viewBtn = document.createElement("div");
+        viewBtn.innerHTML = `${o.type == "snapshot"?'&#128248;':''} ${o.name} <sub> [${o.totalChunks || '#'}]</sub> <br /><sub>${o.startTime}</sub>`; 
+        viewBtn.addEventListener('click',async (e) => {
+            if(o.type == "snapshot"){
+                const img = document.createElement('img');
+                img.src = o.snapURL;
+                img.addEventListener('click',img.remove);
+                document.getElementById("snap-container").appendChild(img);
+            }
+            if(o.type == "dataStream"){
+                isHold = true;
+                data_plot = [];
+                let nextChunkID = o.dataChunkId;
+                while (nextChunkID) {
+                    const chunk = await dbManager.get("dataChunks", nextChunkID);
+                    if (!chunk) break;
+                    data_plot.push(...chunk.data);
+                    nextChunkID = chunk.nextChunkId || null;
+                }
+            }
+        })
+        
+        const delBtn = document.createElement("div");
+        delBtn.className = "danger";
+        delBtn.innerHTML = "x";
+        delBtn.addEventListener('click', async () => {
+            if(isRecording) {
+                //prevent delete while recording
+                document.notify("can't delete while recording!!","error")
+                return false;
+            }
+            
+            dbManager.delete("metadata",o.id);
+            
+            let nextChunkID = o.dataChunkId;
+            while (nextChunkID) {
+                const chunk = await dbManager.get("dataChunks", nextChunkID);
+                if (!chunk) break;
+                dbManager.delete("dataChunks",nextChunkID);
+                nextChunkID = chunk.nextChunkId || null;
+            }
+        })
+        
+        const downloadBtn = document.createElement("div");
+        downloadBtn.innerHTML = "&#x2913;";
+        downloadBtn.addEventListener('click',() => {
+            exportData(o.id);
+        })
+        
+        flexBox.appendChild(viewBtn);
+        flexBox.appendChild(downloadBtn);
+        flexBox.appendChild(delBtn);
+        recordingsDIV.appendChild(flexBox);
+    })
+}
+updateRecordingUI();
+dbManager.addChangeEventListener(updateRecordingUI,"metadata");
+async function exportData(id) {
+    const metadata = await dbManager.get("metadata", id);
+
+    let chunks = [], nextChunkID = metadata.dataChunkId;
+    while (nextChunkID) {
+        const chunk = await dbManager.get("dataChunks", nextChunkID);
+        if (!chunk) break;
+        chunks.length > 0?chunks[0].data.push(...chunk.data):chunks.push(chunk);
+        nextChunkID = chunk.nextChunkId || null;
+    }
+    
+    if(nextChunkID){
+        metadata.totalChunks = 1;
+        delete chunks[0].nextChunkId;
+    }
+
+    const blob = new Blob([JSON.stringify({ metadata, chunks })], { type: "application/json" });
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: "ECGREC-"+metadata.name+metadata.startTime+".json" });
+    a.click();
+}
+
+document.getElementById('recordingImport').addEventListener('change', async event => {
+    const reader = new FileReader();
+    reader.onload = async e => {
+        const { metadata, chunks } = JSON.parse(e.target.result);
+        delete metadata.id;
+        
+        if(metadata.dataChunkId){
+            var chunk = chunks.find(o => o.id == metadata.dataChunkId);
+            delete chunk.id;
+            metadata.dataChunkId = await dbManager.add("dataChunks", chunk);
+        }
+        await dbManager.add("metadata", metadata);
+    };
+    reader.readAsText(event.target.files[0])
+});
+
+
+
+var ECGinterpreter = (function (ecgSamples,sampleRate) {
+var result = {
+    min: Math.min(...ecgSamples),
+    max: Math.max(...ecgSamples),
+    sps : sampleRate,
+    hr: [],
+    R: [],
+    PQ: [],
+    QR: [],
+    RS: [],
+    ST: []
+};
+
+// ---- Find R peaks --- //
+result.R = (input => {
+    const min = result.min, mid = (result.max - min) * 0.8;
+    let peaks = [], max = -Infinity, idx = -1;
+    
+    for (let i in input) {
+        if (input[i] > min + mid) {
+            if (input[i] > max) {
+                max = input[i];
+                idx = i;
+            }
+        } else if (idx !== -1) {
+            peaks.push(Number(idx));
+            max = -Infinity;
+            idx = -1;
+        }
+    }
+    if (idx !== -1) peaks.push(Number(idx));
+    return peaks;
+})(ecgSamples);
+
+
+// ---- Calculate Heart Rate --- //
+result.hr = Math.round(((result.R.length-1)*sampleRate*60)/(result.R.at(-1) - result.R[0]));
+
+// ---- Find PQST peaks --- //
+for(var i = 0; i < result.R.length-1;i++){
+    var rrChunk = ecgSamples.slice(result.R[i],result.R[i+1]);
+    var RS = rrChunk.indexOf(Math.min(...rrChunk));
+    result.RS.push(RS);
+    
+    var srHalfChunk = rrChunk.slice(RS,RS+(rrChunk.length/2));
+    var ST = srHalfChunk.indexOf(Math.max(...srHalfChunk));
+    result.ST.push(ST);
+    
+    var srHalfChunk2 = rrChunk.slice(RS+(rrChunk.length/2),-1);
+    var QR = 0;
+    for(let k = srHalfChunk2.length - 1; k >= 0 && srHalfChunk2.at(k)-srHalfChunk2.at(k-1) >= 0; k--) QR = srHalfChunk2.length-k ;
+    result.QR.push(QR);
+    
+    var sqHalfChunk2 = srHalfChunk2.slice(0,-QR);
+    var PQ = sqHalfChunk2.length-sqHalfChunk2.indexOf(Math.max(...sqHalfChunk2));
+    result.PQ.push(PQ);
+}
+//data_plot = rrChunk;
+/*data_plot[data_plot.length-QR] = 2999;
+data_plot[data_plot.length-PQ-QR] = 2999;
+data_plot[RS] = 2999;
+data_plot[RS+ST] = 2999;*/
+
+
+function analyzeECG(result) {
+  if (result.hr < 5) {
+    return "Rest In Peace 🕊️";
+  }
+  if (result.hr < 60) {
+    return "Abnormal: Bradycardia";
+  }
+  if (result.hr > 300) {
+    return "Invalid Data...!!";
+  }
+  if (result.hr > 100) {
+    return "Abnormal: Tachycardia";
+  }
+  return "Normal ECG";
+}
+
+
+
+// ---- Update UI --- //
+(eles => {
+    for(var i in eles){document.querySelector(i).innerText = (typeof eles[i] == 'number'?Math.round(eles[i]):eles[i]) || "•_°"
+}})
+({
+    "#param-result": analyzeECG(result),
+    "#param-hr": result.hr,
+    "#param-qrs": (result.QR[0] + result.RS[0])*1e3/sampleRate,
+    "#param-qt": (result.QR[0] + result.RS[0] + result.ST[0])*1e3/sampleRate,
+    "#param-pr": (result.PQ[0] + result.QR[0])*1e3/sampleRate,
+    "#param-st": (result.ST[0])*1e3/sampleRate,
+});
+
+return result;
+});
+//let rslt = ECGinterpreter(data_plot,500);
+//console.log(JSON.stringify(rslt));
+
+
+
+// ---- Ai Assistant ----//
+(() => {
+var isBotAlive = false;
+const botUserKey = "xxxxx.xxxxx.xxxxxx.xxxxxxx";
+const botUserId = "user_xxxxxxxxxxxxxxx";
+const botURL = "https://chat.botpress.cloud/xxxxxxxxxxxx-xxxxxxxxx-xxxxx";
+const output = document.getElementById("ai-output");
+const requestHeader = {
+    accept: 'application/json',
+    'x-user-key': botUserKey,
+    'content-type': 'application/json'
+  };
+
+fetch(botURL+'/conversations/'+botUserId, {
+  method: 'DELETE',
+  headers: requestHeader
+}).then(res => {
+    fetch(botURL+'/conversations/get-or-create', {
+      method: 'POST',
+      headers: requestHeader,
+      body: JSON.stringify({id: botUserId})
+    }).catch(err => console.error(err));
+  })
+  .catch(err => console.error(err));
+
+
+
+
+document.getElementById("ai-assistBtn").addEventListener('click',async () => {
+    output.innerText = "In progress...!!";
+    var prompt = ECGResult.hr > 300?"Invalid data!!":`User's heart rate is ${ECGResult.hr} BPM. Detected ECG :
+    P-Q duration = ${ECGResult.PQ[0] * 1000 / ECGResult.sps} ms
+    Q-R duration = ${ECGResult.QR[0] * 1000 / ECGResult.sps} ms
+    R-S duration = ${ECGResult.RS[0] * 1000 / ECGResult.sps} ms
+    S-T duration = ${ECGResult.ST[0] * 1000 / ECGResult.sps} ms
+    `;
+
+    await fetch(botURL+'/messages', {
+      method: 'POST',
+      headers: requestHeader,
+      body: JSON.stringify({
+        payload: {type: 'text', text: prompt},
+        conversationId: botUserId
+      })
+    }).catch(err => [document.notify("Failed to connect AI Assistant...!!","error"),output.innerText = "NO Internet Connection!!"]);
+    isBotAlive || startAIListening();
+});
+async function startAIListening() {
+try {
+    isBotAlive = true;
+    const response = await fetch(botURL+"/conversations/"+botUserId+"/listen", {
+      method: 'GET',
+      headers: requestHeader
+    });
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        decoder.decode(value)?.match(/\{.*\}/)?.forEach(o => {
+        const data = JSON.parse(o).data;
+        if(data && data.payload.text){
+            data.isBot && (output.innerHTML = data.payload.text.replace(/\*\*(.*?)\*\*/g, "<b>$1</b>"));
+        }})
+    }
+} catch (e) {
+    isBotAlive = false;
+    document.notify("AI Assistant is not responding...!!","error")
+}};
+})();
+\end{lstlisting}

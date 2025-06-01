@@ -1,0 +1,475 @@
+\documentclass[12pt,a4paper]{report}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\captionsetup[subfigure]{list=true}
+\usepackage{amsmath}
+\usepackage{fancyhdr}
+\usepackage{cite}
+\usepackage{framed}
+\usepackage{enumitem}
+\usepackage{float}
+\usepackage{datetime2}
+\usepackage{multicol}
+\usepackage{blindtext}
+\usepackage{xpatch}
+\usepackage{geometry}
+ \geometry{
+ right=25mm,
+ left=25mm,
+ top=20mm,
+ bottom=25mm,
+ }
+\usepackage{fontspec}
+\usepackage{tocloft}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{hyperref}
+\makeatletter
+% \renewcommand{\bibname}{References}
+\renewcommand{\cftdot}{}
+% \renewcommand{\cftchappresnum}{CHAPTER }
+% \renewcommand{\cftchapaftersnum}{:}
+% \renewcommand{\cftchapnumwidth}{6.5em}
+% \renewcommand\cftfigindent{0pt}
+% \renewcommand\cftfigpresnum{Figure\ }
+% \renewcommand\cftfigaftersnum{ : }
+% \renewcommand{\cftfignumwidth}{5.5em}
+% \renewcommand{\cfttabpresnum}{Table\ }
+% \renewcommand\cfttabaftersnum{ : }
+% \renewcommand{\cfttabnumwidth}{5em}
+\makeatother
+
+% \renewcommand{\familydefault}{\sfdefault}
+
+
+% ----- Code highlighter ----- %
+
+\lstdefinestyle{htmlcssjs}{
+    basicstyle=\ttfamily\fontsize{5}{3}\selectfont, % Code font and size
+    numberstyle=\tiny\color{gray},     % Line number style
+    numbers=left,                      % Line numbers on the left
+    numbersep=5pt,                     % Line number spacing
+    frame=single,                      % Frame around the code
+    breaklines=true,                   % Line breaking
+    tabsize=2,                         % Tab size
+    showstringspaces=false,            % Don't show spaces
+}
+
+% HTML Style
+\lstdefinelanguage{HTML}{
+    language=html,
+    sensitive=true,
+    morecomment=[s]{<!--}{-->},
+    morestring=[b]",
+    tagstyle=\color{blue},
+    stringstyle=\color{red},
+    commentstyle=\color{green},
+}
+
+% CSS Style
+\lstdefinelanguage{CSS}{
+    language=css,
+    sensitive=true,
+    morecomment=[l]{//},
+    morecomment=[s]{/*}{*/},
+    morestring=[b]",
+    keywordstyle=\color{purple},
+    stringstyle=\color{red},
+    commentstyle=\color{green},
+}
+
+% JavaScript Style
+\lstdefinelanguage{JavaScript}{
+    language=java,
+    sensitive=true,
+    morecomment=[l]{//},
+    morecomment=[s]{/*}{*/},
+    morestring=[b]",
+    keywordstyle=\color{blue},
+    stringstyle=\color{orange},
+    commentstyle=\color{green},
+}
+
+% C++ Style
+\lstdefinelanguage{CPP}{
+    language=C++,
+    morecomment=[l]{//},
+    morecomment=[s]{/*}{*/},
+    morestring=[b]",
+    keywordstyle=\color{blue},
+    stringstyle=\color{red},
+    commentstyle=\color{green},
+}
+% end----- Code highlighter ----- %
+
+% ---- Unsupported Charecters ----- %
+\usepackage{pifont}
+\usepackage{tikz}
+\usetikzlibrary{positioning, arrows.meta}
+\usepackage{adjustbox}
+
+\newcommand{\prevtrack}{%
+\adjustbox{valign=c}{%
+\begin{tikzpicture}[scale=0.02]
+  \filldraw[black] (6,0) -- (6,10) -- (0,5) -- cycle; % Triangle
+  \filldraw[black] (12,0) -- (12,10) -- (6,5) -- cycle; % Triangle
+  \draw[black, thick] (0,0) -- (0,10); % Bar
+\end{tikzpicture}}%
+}
+
+\newcommand{\nexttrack}{%
+\adjustbox{valign=c}{%
+\begin{tikzpicture}[scale=0.02]
+  \filldraw[black] (0,0) -- (0,10) -- (6,5) -- cycle; % Triangle
+  \filldraw[black] (6,0) -- (6,10) -- (12,5) -- cycle; % Triangle
+  \draw[black, thick] (12,0) -- (12,10); % Bar
+\end{tikzpicture}}%
+}
+
+\newcommand{\downleftarrow}{
+\begin{tikzpicture}[scale=0.15]
+  \draw[->, thick] (0,1) -- (0,-1) -- (0,-2);
+\end{tikzpicture}
+}
+% end---- Unsupported Charecters ----- %
+
+
+\makeatletter
+\renewcommand{\chapter}{\@startsection{chapter}{1}{0pt}{-10pt}{20pt}{\newpage \large\@chapapp \huge\bfseries\centering \space }}
+\makeatother
+
+
+% \makeatletter
+% \xpatchcmd{\@makeschapterhead}{%
+%   \Huge \bfseries  #1\par\nobreak%
+% }{%
+%   \Huge \bfseries\centering #1\par\nobreak% 
+% }{\typeout{Patched makeschapterhead}}{\typeout{patching of @makeschapterhead failed}}
+
+
+% \xpatchcmd{\@makechapterhead}{%
+%   \huge\bfseries \@chapapp\space \thechapter
+% }{%
+%   \huge\bfseries\centering \@chapapp\space \thechapter
+% }{\typeout{Patched @makechapterhead}}{\typeout{Patching of @makechapterhead failed}}
+% \makeatother
+
+% %The above Section make chapter and its name to center of the page
+% %\unwanted packages also included
+
+
+\linespread{1.5}
+% \pagestyle{fancy}
+% \fancyhead{}
+% %\header and footer section
+% \renewcommand\headrulewidth{0.1pt}
+% \fancyhead[L]{\footnotesize \leftmark}
+% \fancyhead[R]{\footnotesize \thepage}
+% \renewcommand\headrulewidth{0pt}
+% % \fancyfoot[R]{\small RANAGHAT GOVERNMENT POLYTECHNIC}
+% \renewcommand\footrulewidth{0.1pt}
+% \fancyfoot[C]{2024 - 2025}
+% \fancyfoot[L]{\small Single lead mobile ECG machine}
+
+
+
+
+\begin{document}
+
+\begin{center}
+{\Large \textbf{MicroECG : A single lead mobile ECG machine}}\\
+\vspace{0.5cm}
+
+A PROJECT REPORT\\
+SUBMITTED IN PARTIAL FULFILLMENT OF THE REQUIREMENTS\\
+FOR THE AWARD OF THE DIPLOMA\\
+IN\\
+\textbf{Electical Engineering} \\
+\vspace{1 cm}
+Submitted by: \\
+
+% \begin{multicols}{3}
+% \vspace{1cm}
+TANIMA GHOSH(D222322596)\\
+\vspace{0.2cm}
+
+% \vspace{1cm}
+RAJU ADHIKARY(D222322568)\\
+\vspace{0.2cm}
+
+% \vspace{1cm}
+SUDIPTA SEN(D222322587)\\
+\vspace{0.2cm}
+
+% \vspace{1cm}
+RUMA MANDI(D222322574)\\
+\vspace{0.2cm}
+
+% \vspace{1cm}
+GOUTAM AMBALI(D202116553)\\
+\vspace{0.2cm}
+% \end{multicols}
+\vspace{1 cm}
+Under the guidance of\\
+
+Lec.(Mr.) SOUVIK BAG\\
+
+\end{center}
+
+% \vspace{4pt}
+\begin{center}
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.1]{images/institute_logo.png}
+    \label{fig:institute_logo}
+\end{figure}
+\textbf{DEPT. OF ELECTRICAL ENGINEERING}\\
+
+RANAGHAT GOVERNMENT POLYTECHNIC\\
+
+Ranaghat, Nadia-741201 \\
+\textbf{JUNE 2025}\\
+\end{center}
+
+\thispagestyle{empty}
+
+\newpage
+
+
+
+\newpage
+
+\pagenumbering{roman}
+
+\begin{center}
+
+
+\begin{center}
+%\vspace{1.5cm}
+\textbf{DEPT. OF ELECTRICAL ENGINEERING}\\
+
+RANAGHAT GOVERNMENT POLYTECHNIC \\
+
+Ranaghat, Nadia-741201\\
+\end{center}
+\vspace{2 cm}
+\textbf{\underline{CANDIDATE’S DECLARATION}}\\
+\addcontentsline{toc}{chapter}{Candidate’s Declaration}
+\end{center}
+\vspace{1.2cm}
+We, TANIMA GHOSH (D222322596), RAJU ADHIKARY (D222322568), SUDIPTA SEN (D222322587), RUMA MANDI (D222322574) \& GOUTAM AMBALI (D202116553) students of Diploma (ELECTRICAL ENGINEERING), hereby declare that the Project Dissertation titled -- “MicroECG: Single lead mobile ECG machine” which is submitted by us to the Department of Electical Engineering, RANAGHAT GOVERNMENT POLYTECHNIC, West Bengal in fulfillment of the requirement for awarding of Diploma, is not copied from any source without proper citation. This work has not previously formed the basis for the award of any Diploma or other similar title or recognition in our institute.
+
+
+\noindent \begin{minipage}{3.6cm}
+\begin{flushleft}
+\vspace{5 cm}
+                         
+Place: West Bengal\\
+Date: \verb|__/__/_____| \\
+
+\end{flushleft} 
+\end{minipage}
+\hfill
+\begin{minipage}{13.6cm}
+\begin{flushright}                                      
+\vspace{5 cm}
+\begin{multicols}{3}
+\textbf{TANIMA GHOSH}
+\textbf{(D222322596)}\\
+\vspace{1cm}
+
+\textbf{RAJU ADHIKARY}
+\textbf{(D222322568)}\\
+\vspace{1cm}
+
+\textbf{SUDIPTA SEN}
+\textbf{(D222322587)}\\
+\vspace{1cm}
+
+\textbf{RUMA MANDI}
+\textbf{(D222322574)}\\
+\vspace{1cm}
+
+\textbf{GOUTAM AMBALI}
+\textbf{(D202116553)}\\
+\vspace{1cm}
+\end{multicols}
+
+
+\end{flushright} 
+\end{minipage}
+
+\thispagestyle{empty}
+
+\newpage
+
+
+\begin{center}
+%\vspace{1.5cm}
+\textbf{DEPT. OF ELECTRICAL ENGINEERING}\\
+
+RANAGHAT GOVERNMENT POLYTECHNIC \\
+
+Ranaghat, Nadia-741201\\
+\end{center}
+
+\vspace{2cm}
+\begin{center}
+ \textbf{\underline {CERTIFICATE}}
+ \addcontentsline{toc}{chapter}{Certificate}
+\end{center}
+\sloppy I hereby certify that the Project titled "MicroECG: Single lead mobile ECG machine” which is submitted by GOUTAM AMBALI (D202116553), RAJU ADHIKARY (D222322568), SUDIPTA SEN (D222322587), RUMA MANDI (D222322574) \& TANIMA GHOSH (D222322596) for fulfillment of the requirements for awarding of the Diploma is a record of the project work carried out by the students under my guidance \& supervision. To the best of my knowledge, this work has not been submitted in any part or fulfillment for any Degree or Diploma to this Institute or elsewhere.
+
+\noindent \begin{minipage}{4cm}
+\begin{flushleft}
+\vspace{1 cm}
+                         
+Place : West Bengal \\
+Date : \verb|__/__/_____|\\
+
+\end{flushleft} 
+\end{minipage}
+\hfill
+\begin{minipage}{10cm}
+\begin{flushright}                                      
+\vspace{2cm}
+                         
+
+\vspace{.8cm}
+\textbf{Lec.(Mr.) SOUVIK BAG}\\
+\textbf{(SUPERVISOR)}\\
+Lecturer\\
+Department of ELECTRICAL ENGINEERING \\
+RANAGHAT GOVERNMENT POLYTECHNIC\\
+\end{flushright} 
+\end{minipage}
+% \thispagestyle{empty}
+
+\newpage
+% Please remove and edit percentage(%) Symbol, if you want this Acknowledgement page in your report. As per ktu guideline, this page is not necessary. 
+
+% \begin{abstract}
+
+
+
+\begin{center}
+ \textbf{ABSTRACT}
+ \addcontentsline{toc}{chapter}{Abstract}
+\end{center}
+
+% \textbf{Keywords} - Portable ECG, Real-Time Monitoring, DIY Healthcare, Wi-Fi Medical Device, Low-Cost Diagnostics, Low-Cost Healthcare Technology, Rural Health Diagnostics
+
+\noindent
+Imagine a world where rural clinics, mobile health vans, or even individuals in remote villages can screen for heart conditions instantly—without hospitals, mobile apps, or internet access.
+
+\textbf{Micro-ECG} makes that possible.
+
+We’ve engineered a fully standalone, portable ECG system that:
+\begin{itemize}
+    \item Uses \textbf{WiFi} to stream real-time heart data directly to any phone or laptop—no app, no backend, no internet.
+    \item Is powered by a \textbf{1200mAh battery}, rechargeable via micro-USB, and designed for long-time operation.
+    \item Offers \textbf{good signal quality} using the AD8232 INA and precision analog filtering.
+    \item Processes and visualizes signals via a browser-based UI using \textbf{pure JavaScript}, hosted locally via a captive portal.
+\end{itemize}
+
+\vspace{10pt}
+\noindent
+Key highlights:
+\begin{itemize}
+    \item \textbf{Real-time ECG waveform rendering} over WebSocket at 200–500Hz.
+    \item \textbf{Platform-independent}—works on Android, iOS, Windows, Linux without setup.
+    \item \textbf{No dependency on cloud, Bluetooth, or apps}.
+    \item \textbf{Optional chest electrode port} enhances signal quality for clinical scenarios.
+\end{itemize}
+
+\vspace{10pt}
+\noindent
+Forward-Looking Capabilities:
+\begin{itemize}
+    \item Integration with \textbf{Full AI-based rhythm detection} APIs.
+    \item \textbf{Multi-lead support} using analog multiplexers or ESP32-based architecture.
+    \item Future potential for \textbf{offline TinyML inference}, cloud data logging, and remote web dashboards.
+\end{itemize}
+
+\noindent
+With Micro-ECG, we prove that compact, cost-effective medical electronics can deliver high-fidelity diagnostics using nothing more than a browser and a WiFi compatible device.
+
+
+
+\newpage
+\begin{center}
+ \textbf{ACKNOWLEDGEMENT}
+ \addcontentsline{toc}{chapter}{Acknowledgement}
+\end{center}
+
+The successful completion of any task is incomplete and meaningless without giving any due credit to the people who made it possible without which the project would not have been successful and would have existed in theory.
+
+First and foremost, we are grateful to \textbf{Mr. Achanchal Kundu}, HOD, Department of Electical Engineering, RANAGHAT GOVERNMENT POLYTECHNIC, and all other faculty members of our department for their constant guidance and support, constant motivation and sincere support and gratitude for this project work. We owe a lot of thanks to our supervisor, \textbf{Mr. Souvik Bag}, Lecturer, Department of Electical Engineering, RANAGHAT GOVERNMENT POLYTECHNIC for igniting and constantly motivating us and guiding us in the idea of a creatively and amazingly performed Major Project in undertaking this endeavor and challenge and also for being there whenever we needed his guidance or assistance.
+
+
+We would also like to take this moment to show our thanks and gratitude to one and all, who indirectly or directly have given us their hand in this challenging task. We feel happy and joyful and content in expressing our vote of thanks to all those who have helped us and guided us in presenting this project work for our Major project. Last, but never least, we thank our well-wishers and parents for always being with us, in every sense and constantly supporting us in every possible sense whenever possible.
+
+
+
+\vspace{1 cm}                        
+\begin{multicols}{3}
+\centering
+\textbf{GOUTAM AMBALI}
+\textbf{(D202116553)}\\
+\vspace{1cm}
+
+
+\textbf{RAJU ADHIKARY}
+\textbf{(D222322568)}\\
+\vspace{1cm}
+
+
+\textbf{SUDIPTA SEN}
+\textbf{(D222322587)}\\
+\vspace{1cm}
+
+
+\textbf{RUMA MANDI}
+\textbf{(D222322574)}\\
+\vspace{1cm}
+\sloppy
+
+\textbf{TANIMA GHOSH}
+\textbf{(D222322596)}\\
+\vspace{1cm}
+\end{multicols}
+
+
+\newpage
+\tableofcontents %This command used for index.
+% \newpage
+% \listoftables
+\newpage
+\addcontentsline{toc}{chapter}{List of Figures}
+
+% \newpage
+\listoffigures
+% \addcontentsline{toc}{chapter}{List of Tables}
+
+
+
+\newpage
+% \include{abbr.tex}
+
+% \thispagestyle{empty}
+
+
+\newpage
+
+\pagenumbering{arabic}    
+
+\include{contents.tex}
+
+\include{appendix.tex}
+
+\include{bib.tex}
+
+\end{document}
+

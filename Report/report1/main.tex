@@ -1,0 +1,428 @@
+\documentclass[12pt,a4paper]{report}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{fancyhdr}
+\usepackage{cite}
+\usepackage{framed}
+\usepackage{float}
+\usepackage{datetime2}
+\usepackage{multicol}
+%The below Section make chapter and its name to center of the page
+\usepackage{blindtext}
+\usepackage{xpatch}
+\usepackage{geometry}
+ \geometry{
+ right=25mm,
+ left=25mm,
+ top=20mm,
+ bottom=25mm,
+ }
+\usepackage{fontspec}
+\usepackage{tocloft}
+
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{hyperref}
+\makeatletter
+\renewcommand{\bibname}{References}
+\renewcommand{\cftdot}{}
+% \renewcommand{\cftchappresnum}{CHAPTER }
+% \renewcommand{\cftchapaftersnum}{:}
+% \renewcommand{\cftchapnumwidth}{6.5em}
+% \renewcommand\cftfigindent{0pt}
+% \renewcommand\cftfigpresnum{Figure\ }
+% \renewcommand\cftfigaftersnum{ : }
+% \renewcommand{\cftfignumwidth}{5.5em}
+% \renewcommand{\cfttabpresnum}{Table\ }
+% \renewcommand\cfttabaftersnum{ : }
+% \renewcommand{\cfttabnumwidth}{5em}
+\makeatother
+
+% \renewcommand{\familydefault}{\sfdefault}
+
+
+% Styles for Codes
+
+\lstdefinestyle{htmlcssjs}{
+    basicstyle=\ttfamily\footnotesize, % Code font and size
+    numberstyle=\tiny\color{gray},     % Line number style
+    numbers=left,                      % Line numbers on the left
+    numbersep=5pt,                     % Line number spacing
+    frame=single,                      % Frame around the code
+    breaklines=true,                   % Line breaking
+    tabsize=2,                         % Tab size
+    showstringspaces=false,            % Don't show spaces
+}
+
+% HTML Style
+\lstdefinelanguage{HTML}{
+    language=html,
+    sensitive=true,
+    morecomment=[s]{<!--}{-->},
+    morestring=[b]",
+    tagstyle=\color{blue},
+    stringstyle=\color{red},
+    commentstyle=\color{green},
+}
+
+% CSS Style
+\lstdefinelanguage{CSS}{
+    language=css,
+    sensitive=true,
+    morecomment=[l]{//},
+    morecomment=[s]{/*}{*/},
+    morestring=[b]",
+    keywordstyle=\color{purple},
+    stringstyle=\color{red},
+    commentstyle=\color{green},
+}
+
+% JavaScript Style
+\lstdefinelanguage{JavaScript}{
+    language=java,
+    sensitive=true,
+    morecomment=[l]{//},
+    morecomment=[s]{/*}{*/},
+    morestring=[b]",
+    keywordstyle=\color{blue},
+    stringstyle=\color{orange},
+    commentstyle=\color{green},
+}
+
+% C++ Style
+\lstdefinelanguage{CPP}{
+    language=C++,
+    morecomment=[l]{//},
+    morecomment=[s]{/*}{*/},
+    morestring=[b]",
+    keywordstyle=\color{blue},
+    stringstyle=\color{red},
+    commentstyle=\color{green},
+}
+
+
+
+\makeatletter
+\xpatchcmd{\@makeschapterhead}{%
+  \Huge \bfseries  #1\par\nobreak%
+}{%
+  \Huge \bfseries\centering #1\par\nobreak%
+}{\typeout{Patched makeschapterhead}}{\typeout{patching of @makeschapterhead failed}}
+
+
+\xpatchcmd{\@makechapterhead}{%
+  \huge\bfseries \@chapapp\space \thechapter
+}{%
+  \huge\bfseries\centering \@chapapp\space \thechapter
+}{\typeout{Patched @makechapterhead}}{\typeout{Patching of @makechapterhead failed}}
+
+\makeatother
+%The above Section make chapter and its name to center of the page
+%\unwanted packages also included
+\linespread{1.5}
+% \pagestyle{fancy}
+% \fancyhead{}
+% %\header and footer section
+% \renewcommand\headrulewidth{0.1pt}
+% \fancyhead[L]{\footnotesize \leftmark}
+% \fancyhead[R]{\footnotesize \thepage}
+% \renewcommand\headrulewidth{0pt}
+% % \fancyfoot[R]{\small RANAGHAT GOVERNMENT POLYTECHNIC}
+% \renewcommand\footrulewidth{0.1pt}
+% \fancyfoot[C]{2024 - 2025}
+% \fancyfoot[L]{\small Single lead mobile ECG machine}
+
+
+
+
+\begin{document}
+
+\begin{center}
+{\Large \textbf{Single lead mobile ECG machine}}\\
+\vspace{0.5cm}
+
+A PROJECT REPORT\\
+SUBMITTED IN PARTIAL FULFILLMENT OF THE REQUIREMENTS\\
+FOR THE AWARD OF THE DIPLOMA\\
+IN\\
+\textbf{Electical Engineering} \\
+\vspace{1 cm}
+Submitted by: \\
+
+% \begin{multicols}{3}
+% \vspace{1cm}
+SUDIPTA SEN(D222322587)\\
+\vspace{0.2cm}
+
+% \vspace{1cm}
+TANIMA GHOSH(D222322596)\\
+\vspace{0.2cm}
+
+% \vspace{1cm}
+RAJU ADHIKARY(D222322568)\\
+\vspace{0.2cm}
+
+% \vspace{1cm}
+GOUTAM AMBALI(D202116553)\\
+\vspace{0.2cm}
+
+% \vspace{1cm}
+RUMA MANDI(D222322574)\\
+\vspace{0.2cm}
+% \end{multicols}
+\vspace{1 cm}
+Under the guidance of\\
+
+Lec.(Mr.) SOUVIK BAG\\
+
+\end{center}
+
+% \vspace{4pt}
+\begin{center}
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.1]{images/institute_logo.png}
+    \label{fig:institute_logo}
+\end{figure}
+\textbf{DEPT. OF ELECTRICAL ENGINEERING}\\
+
+RANAGHAT GOVERNMENT POLYTECHNIC\\
+
+Ranaghat, Nadia-741201 \\
+\textbf{DEC 2024}\\
+\end{center}
+
+\thispagestyle{empty}
+
+\newpage
+
+
+
+\newpage
+
+\pagenumbering{roman}
+
+%\Declaration in this page.
+
+
+\begin{center}
+
+
+\begin{center}
+%\vspace{1.5cm}
+\textbf{DEPT. OF ELECTRICAL ENGINEERING}\\
+
+RANAGHAT GOVERNMENT POLYTECHNIC \\
+
+Ranaghat, Nadia-741201\\
+\end{center}
+\vspace{2 cm}
+\textbf{\underline{CANDIDATE’S DECLARATION}}\\
+\addcontentsline{toc}{chapter}{Candidate’s Declaration}
+\end{center}
+\vspace{1.2cm}
+We, SUDIPTA SEN (D222322587), TANIMA GHOSH (D222322596), RAJU ADHIKARY (D222322568), GOUTAM AMBALI (D202116553) \& RUMA MANDI (D222322574) students of Diploma (ELECTRICAL ENGINEERING), hereby declare that the Project Dissertation titled -- “Single lead mobile ECG machine” which is submitted by us to the Department of Electical Engineering, RANAGHAT GOVERNMENT POLYTECHNIC, West Bengal in fulfillment of the requirement for awarding of Diploma, is not copied from any source without proper citation. This work has not previously formed the basis for the award of any Diploma or other similar title or recognition in our institute.
+
+
+% \begin{description}
+%   \item [Title of the Paper] Identification of IUU Transshipment Activity Using AIS Data.
+%   \item[Author names] Harshit Muhal, Ishan Chaudhary, Kirti Dabas 
+%   \item[Name of Conference/Journal] International Conference for Emerging Technology 2022
+%   \item [Conference Dates with the venue (if applicable)]Online (27-29 May 2022)
+%   \item [Have you registered for the conference (Yes/No)?] Yes
+%   \item [Status of paper (Accepted/Published/Communicated)] Accepted
+%   \item [Date of paper acceptance] 02 FEBRUARY 2022
+%   \item [Date of paper publication] YET TO BE PUBLISHED
+% \end{description}
+
+\noindent \begin{minipage}{3.6cm}
+\begin{flushleft}
+\vspace{5 cm}
+                         
+Place: West Bengal\\
+Date: 2024-12-11\\
+
+\end{flushleft} 
+\end{minipage}
+\hfill
+\begin{minipage}{13.6cm}
+\begin{flushright}                                      
+\vspace{5 cm}
+\begin{multicols}{3}
+\textbf{SUDIPTA SEN}
+\textbf{(D222322587)}\\
+\vspace{0.2cm}
+
+\textbf{TANIMA GHOSH}
+\textbf{(D222322596)}\\
+\vspace{0.2cm}
+
+\textbf{RAJU ADHIKARY}
+\textbf{(D222322568)}\\
+\vspace{0.2cm}
+
+\textbf{GOUTAM AMBALI}
+\textbf{(D202116553)}\\
+\vspace{0.2cm}
+
+\textbf{RUMA MANDI}
+\textbf{(D222322574)}\\
+\vspace{0.2cm}
+\end{multicols}
+
+
+\end{flushright} 
+\end{minipage}
+
+\thispagestyle{empty}
+
+\newpage
+
+
+\begin{center}
+%\vspace{1.5cm}
+\textbf{DEPT. OF ELECTRICAL ENGINEERING}\\
+
+RANAGHAT GOVERNMENT POLYTECHNIC \\
+
+Ranaghat, Nadia-741201\\
+\end{center}
+
+\vspace{2cm}
+\begin{center}
+ \textbf{\underline {CERTIFICATE}}
+ \addcontentsline{toc}{chapter}{Certificate}
+\end{center}
+\sloppy I hereby certify that the Project titled "Single lead mobile ECG machine” which is submitted by SUDIPTA SEN (D222322587), TANIMA GHOSH (D222322596), RAJU ADHIKARY (D222322568), GOUTAM AMBALI (D202116553) \& RUMA MANDI (D222322574) for fulfillment of the requirements for awarding of the Diploma is a record of the project work carried out by the students under my guidance \& supervision. To the best of my knowledge, this work has not been submitted in any part or fulfillment for any Degree or Diploma to this Institute or elsewhere.
+
+\noindent \begin{minipage}{4cm}
+\begin{flushleft}
+\vspace{1 cm}
+                         
+Place : West Bengal \\
+Date : 2024-12-11 \\
+
+\end{flushleft} 
+\end{minipage}
+\hfill
+\begin{minipage}{10cm}
+\begin{flushright}                                      
+\vspace{2cm}
+                         
+
+\vspace{.8cm}
+\textbf{Lec.(Mr.) SOUVIK BAG}\\
+\textbf{(SUPERVISOR)}\\
+Lecturer\\
+Department of ELECTRICAL ENGINEERING \\
+RANAGHAT GOVERNMENT POLYTECHNIC\\
+\end{flushright} 
+\end{minipage}
+% \thispagestyle{empty}
+
+\newpage
+% Please remove and edit percentage(%) Symbol, if you want this Acknowledgement page in your report. As per ktu guideline, this page is not necessary. 
+
+% \begin{abstract}
+
+\begin{center}
+ \textbf{ABSTRACT}
+ \addcontentsline{toc}{chapter}{Abstract}
+\end{center}
+
+\textbf{Keywords} - Portable ECG, Low-Cost Healthcare Technology, Rural Health Diagnostics
+
+\vspace{0.8cm}
+
+This project presents a cost-effective, portable, single-lead ECG (Electrocardiogram) machine designed to meet essential cardiac monitoring needs, particularly in underserved rural or remote areas. Multi-lead ECG machines are often costly and complex, limiting accessibility and usability in such settings. Our single-lead ECG device focuses on affordability, ease of use, and mobility without compromising essential diagnostic functionality.
+
+The proposed system leverages bioinstrumentation amplifiers, precision filters, and a DIY digital storage oscilloscope (DSO) to capture, amplify, and visualize ECG signals. Using Wi-Fi-enabled technology, this prototype also supports data transfer and remote monitoring capabilities. Through systematic design and practical implementation, this project successfully demonstrates real-time ECG signal processing with a user-friendly interface.
+
+In future iterations, we aim to integrate AI-driven health analytics, enhanced wireless capabilities, and expanded outreach for rural healthcare initiatives. This project underscores the potential of affordable healthcare technology to improve access to vital diagnostic tools, addressing a critical gap in global health equity.
+%  \end{abstract} 
+
+\newpage
+\addcontentsline{toc}{chapter}{Acknowledgement}
+
+\chapter*{\centering \large ACKNOWLEDGEMENT\markboth{Acknowledgements}{Acknowledgements}}
+
+The successful completion of any task is incomplete and meaningless without giving any due credit to the people who made it possible without which the project would not have been successful and would have existed in theory.
+
+First and foremost, we are grateful to \textbf{Mr. Achanchal Kundu}, HOD, Department of Electical Engineering, RANAGHAT GOVERNMENT POLYTECHNIC, and all other faculty members of our department for their constant guidance and support, constant motivation and sincere support and gratitude for this project work. We owe a lot of thanks to our supervisor, \textbf{Mr. Souvik Bag}, Lecturer, Department of Electical Engineering, RANAGHAT GOVERNMENT POLYTECHNIC for igniting and constantly motivating us and guiding us in the idea of a creatively and amazingly performed Major Project in undertaking this endeavor and challenge and also for being there whenever we needed his guidance or assistance.
+
+
+We would also like to take this moment to show our thanks and gratitude to one and all, who indirectly or directly have given us their hand in this challenging task. We feel happy and joyful and content in expressing our vote of thanks to all those who have helped us and guided us in presenting this project work for our Major project. Last, but never least, we thank our well-wishers and parents for always being with us, in every sense and constantly supporting us in every possible sense whenever possible.
+
+
+
+\vspace{1 cm}                        
+\begin{multicols}{3}
+\centering
+\textbf{SUDIPTA SEN}
+\textbf{(D222322587)}\\
+\vspace{0.3cm}
+
+
+\textbf{TANIMA GHOSH}
+\textbf{(D222322596)}\\
+\vspace{0.3cm}
+
+
+\textbf{RAJU ADHIKARY}
+\textbf{(D222322568)}\\
+\vspace{0.3cm}
+
+
+\textbf{GOUTAM AMBALI}
+\textbf{(D202116553)}\\
+\vspace{0.3cm}
+\sloppy
+
+\textbf{RUMA MANDI}
+\textbf{(D222322574)}\\
+\vspace{0.3cm}
+\end{multicols}
+
+\tableofcontents %This command used for index.
+% \newpage
+% \listoftables
+
+\addcontentsline{toc}{chapter}{List of Figures}
+
+% \newpage
+\listoffigures
+% \addcontentsline{toc}{chapter}{List of Tables}
+
+
+
+\newpage
+\include{abbr.tex}
+
+% \thispagestyle{empty}
+
+
+\newpage
+
+\pagenumbering{arabic}    
+
+\include{contents.tex}
+
+\include{appendix.tex}
+
+
+
+\include{bib.tex}
+
+% \chapter*{\centering \large PAPER ACCEPTANCE PROOF\markboth{PAPER ACCEPTANCE PROOF}{PAPER ACCEPTANCE PROOF}}
+
+
+% \chapter*{\centering \large REGISTRATION PROOF\markboth{REGISTRATION PROOF}{REGISTRATION PROOF}}
+
+
+% \chapter*{\centering \large SCOPUS INDEXED CONFERENCE PROOF\markboth{SCOPUS INDEXED CONFERENCE PROOF}{SCOPUS INDEXED CONFERENCE PROOF}}
+
+
+\end{document}
+
